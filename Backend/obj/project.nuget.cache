@@ -1,0 +1,25 @@
+{
+  "version": 2,
+  "dgSpecHash": "5ZjwLaUGbxI=",
+  "success": true,
+  "projectFilePath": "C:\\Work\\Quizz\\backend\\Quizit.Api.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\onovi\\.nuget\\packages\\microsoft.aspnetcore.openapi\\10.0.2\\microsoft.aspnetcore.openapi.10.0.2.nupkg.sha512",
+    "C:\\Users\\onovi\\.nuget\\packages\\microsoft.openapi\\2.0.0\\microsoft.openapi.2.0.0.nupkg.sha512",
+    "C:\\Users\\onovi\\.nuget\\packages\\swashbuckle.aspnetcore.swaggerui\\10.2.3\\swashbuckle.aspnetcore.swaggerui.10.2.3.nupkg.sha512"
+  ],
+  "logs": [
+    {
+      "code": "NU1903",
+      "level": "Warning",
+      "message": "Package 'Microsoft.OpenApi' 2.0.0 has a known high severity vulnerability, https://github.com/advisories/GHSA-v5pm-xwqc-g5wc",
+      "projectPath": "C:\\Work\\Quizz\\backend\\Quizit.Api.csproj",
+      "warningLevel": 1,
+      "filePath": "C:\\Work\\Quizz\\backend\\Quizit.Api.csproj",
+      "libraryId": "Microsoft.OpenApi",
+      "targetGraphs": [
+        "net10.0"
+      ]
+    }
+  ]
+}

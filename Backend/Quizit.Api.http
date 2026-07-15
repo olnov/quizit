@@ -1,0 +1,6 @@
+@Quizit.Api_HostAddress = http://localhost:5298
+
+GET {{Quizit.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
