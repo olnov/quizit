@@ -1,4 +1,4 @@
-namespace Quizit.Api;
+namespace Backend;
 
 public class WeatherForecast
 {

@@ -1,4 +1,4 @@
-namespace Quizz.Backend.Features.GameRooms;
+namespace Backend.Features.GameRooms;
 
 public class SubmittedAnswer
 {
