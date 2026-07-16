@@ -37,6 +37,14 @@ public class GameRoomService
     {
         var room = GetRequiredRoom(gameCode);
 
+        var existingPlayer = room.Players.FirstOrDefault(player => player.ConnectionId == connectionId);
+        if (existingPlayer is not null)
+        {
+            existingPlayer.Name = playerName;
+            existingPlayer.IsConnected = true;
+            return existingPlayer;
+        }
+
         var player = new PlayerState
         {
             Name = playerName,
@@ -57,6 +65,23 @@ public class GameRoomService
         player.IsConnected = false;
     }
 
+    public GameRoom? MarkPlayerDisconnected(string connectionId)
+    {
+        foreach (var room in _rooms.Values)
+        {
+            var player = room.Players.FirstOrDefault(current => current.ConnectionId == connectionId);
+            if (player is null)
+            {
+                continue;
+            }
+
+            player.IsConnected = false;
+            return room;
+        }
+
+        return null;
+    }
+
     public GameRoom StartGame(string gameCode, string hostPlayerId)
     {
         var room = GetRequiredRoom(gameCode);
@@ -64,6 +89,11 @@ public class GameRoomService
         if (room.HostPlayerId != hostPlayerId)
         {
             throw new InvalidOperationException("Only the host can start the game.");
+        }
+
+        if (room.Status != GameStatus.Waiting)
+        {
+            throw new InvalidOperationException("The game room has already started.");
         }
 
         room.Status = GameStatus.Countdown;

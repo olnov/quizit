@@ -15,24 +15,26 @@ public class QuizThemesController : ControllerBase
     }
 
     [HttpGet]
-    public IActionResult GetThemes()
+    public async Task<IActionResult> GetThemes(CancellationToken cancellationToken)
     {
-        return Ok(_quizCatalog.GetThemes());
+        return Ok(await _quizCatalog.GetThemesAsync(cancellationToken));
     }
 
     [HttpPost]
-    public IActionResult CreateTheme([FromBody] CreateQuizThemeRequest request)
+    public async Task<IActionResult> CreateTheme(
+        [FromBody] CreateQuizThemeRequest request,
+        CancellationToken cancellationToken)
     {
-        var theme = _quizCatalog.CreateTheme(request.Name);
+        var theme = await _quizCatalog.CreateThemeAsync(request.Name, cancellationToken);
         return Created($"/api/v1/quiz-themes/{theme.Id}", theme);
     }
 
     [HttpGet("{themeId:guid}/questions")]
-    public IActionResult GetQuestions(Guid themeId)
+    public async Task<IActionResult> GetQuestions(Guid themeId, CancellationToken cancellationToken)
     {
         try
         {
-            return Ok(_quizCatalog.GetQuestions(themeId));
+            return Ok(await _quizCatalog.GetQuestionsAsync(themeId, cancellationToken));
         }
         catch (KeyNotFoundException)
         {
@@ -41,16 +43,20 @@ public class QuizThemesController : ControllerBase
     }
 
     [HttpPost("{themeId:guid}/questions")]
-    public IActionResult CreateQuestion(Guid themeId, [FromBody] CreateQuestionRequest request)
+    public async Task<IActionResult> CreateQuestion(
+        Guid themeId,
+        [FromBody] CreateQuestionRequest request,
+        CancellationToken cancellationToken)
     {
         try
         {
-            var question = _quizCatalog.CreateQuestion(
+            var question = await _quizCatalog.CreateQuestionAsync(
                 themeId,
                 request.Text,
                 request.Difficulty,
                 request.Options,
-                request.CorrectOptionIndex);
+                request.CorrectOptionIndex,
+                cancellationToken);
 
             return Created($"/api/v1/quiz-themes/{themeId}/questions/{question.Id}", question);
         }
