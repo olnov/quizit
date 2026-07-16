@@ -11,4 +11,5 @@ public class GameSession
 
     public List<GameSessionPlayer> Players { get; set; } = new();
     public List<GameSessionQuestion> Questions { get; set; } = new();
+    public List<GameSessionAnswer> Answers { get; set; } = new();
 }

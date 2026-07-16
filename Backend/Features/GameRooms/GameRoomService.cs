@@ -7,12 +7,11 @@ public class GameRoomService
 {
     private readonly Dictionary<string, GameRoom> _rooms = new(StringComparer.OrdinalIgnoreCase);
 
-    public GameRoom CreateGameRoom(Guid quizId, string hostName, string connectionId)
+    public GameRoom CreateGameRoom(Guid quizId, string hostName)
     {
         var hostPlayer = new PlayerState
         {
             Name = hostName,
-            ConnectionId = connectionId,
         };
 
         var room = new GameRoom
@@ -33,14 +32,38 @@ public class GameRoomService
         return _rooms.TryGetValue(gameCode, out var room) ? room : null;
     }
 
-    public PlayerState AddPlayer(string gameCode, string playerName, string connectionId)
+    public bool IsHost(string gameCode, string playerToken)
+    {
+        var room = GetRequiredRoom(gameCode);
+        var player = room.Players.FirstOrDefault(current => current.PlayerToken == playerToken);
+        return player?.PlayerId == room.HostPlayerId;
+    }
+
+    public PlayerState GetPlayer(string gameCode, string playerToken)
+    {
+        var room = GetRequiredRoom(gameCode);
+        return room.Players.FirstOrDefault(player => player.PlayerToken == playerToken)
+            ?? throw new InvalidOperationException("The player credentials are not valid for this game room.");
+    }
+
+    public PlayerState JoinPlayer(
+        string gameCode,
+        string playerName,
+        string? playerToken,
+        string connectionId)
     {
         var room = GetRequiredRoom(gameCode);
 
-        var existingPlayer = room.Players.FirstOrDefault(player => player.ConnectionId == connectionId);
+        if (room.Status != GameStatus.Waiting)
+        {
+            throw new InvalidOperationException("Players cannot join after the game has started.");
+        }
+
+        var existingPlayer = room.Players.FirstOrDefault(player => player.PlayerToken == playerToken);
         if (existingPlayer is not null)
         {
             existingPlayer.Name = playerName;
+            existingPlayer.ConnectionId = connectionId;
             existingPlayer.IsConnected = true;
             return existingPlayer;
         }
@@ -82,11 +105,12 @@ public class GameRoomService
         return null;
     }
 
-    public GameRoom StartGame(string gameCode, string hostPlayerId)
+    public GameRoom StartGame(string gameCode, string playerToken)
     {
         var room = GetRequiredRoom(gameCode);
 
-        if (room.HostPlayerId != hostPlayerId)
+        var player = room.Players.FirstOrDefault(current => current.PlayerToken == playerToken);
+        if (player is null || room.HostPlayerId != player.PlayerId)
         {
             throw new InvalidOperationException("Only the host can start the game.");
         }
@@ -105,22 +129,93 @@ public class GameRoomService
 
     public SubmittedAnswer SubmitAnswer(
         string gameCode,
-        string playerId,
-        Guid questionId,
-        Guid answerOptionId
+        SubmittedAnswer answer
     )
     {
         var room = GetRequiredRoom(gameCode);
-        var answer = new SubmittedAnswer
-        {
-            PlayerId = playerId,
-            QuestionId = questionId,
-            AnswerOptionId = answerOptionId,
-        };
 
-        room.CurrentAnswers[playerId] = answer;
+        if (room.Status != GameStatus.QuestionActive)
+        {
+            throw new InvalidOperationException("Answers are not accepted at the current game stage.");
+        }
+
+        if (room.CurrentAnswers.ContainsKey(answer.PlayerId))
+        {
+            throw new InvalidOperationException("The player has already answered this question.");
+        }
+
+        var player = room.Players.SingleOrDefault(current => current.PlayerId == answer.PlayerId)
+            ?? throw new InvalidOperationException("The player is not part of this game room.");
+
+        player.Score += answer.ScoreAwarded;
+        room.CurrentAnswers[answer.PlayerId] = answer;
 
         return answer;
+    }
+
+    public GameRoom BeginQuestion(string gameCode, string playerToken)
+    {
+        var room = GetRequiredRoom(gameCode);
+        EnsureHost(room, playerToken);
+
+        if (room.Status != GameStatus.Countdown)
+        {
+            throw new InvalidOperationException("The game is not ready to start a question.");
+        }
+
+        room.CurrentAnswers.Clear();
+        room.Status = GameStatus.QuestionActive;
+        return room;
+    }
+
+    public GameRoom RevealQuestion(string gameCode, string playerToken)
+    {
+        var room = GetRequiredRoom(gameCode);
+        EnsureHost(room, playerToken);
+
+        if (room.Status != GameStatus.QuestionActive)
+        {
+            throw new InvalidOperationException("The current question is not active.");
+        }
+
+        room.Status = GameStatus.QuestionReveal;
+        return room;
+    }
+
+    public GameRoom ShowScoreboard(string gameCode, string playerToken)
+    {
+        var room = GetRequiredRoom(gameCode);
+        EnsureHost(room, playerToken);
+
+        if (room.Status != GameStatus.QuestionReveal)
+        {
+            throw new InvalidOperationException("Reveal the answer before showing the scoreboard.");
+        }
+
+        room.Status = GameStatus.Scoreboard;
+        return room;
+    }
+
+    public GameRoom NextQuestion(string gameCode, string playerToken)
+    {
+        var room = GetRequiredRoom(gameCode);
+        EnsureHost(room, playerToken);
+
+        if (room.Status != GameStatus.Scoreboard)
+        {
+            throw new InvalidOperationException("Show the scoreboard before moving to the next question.");
+        }
+
+        if (room.CurrentQuestionIndex + 1 >= room.QuestionIds.Count)
+        {
+            CompleteGame(gameCode);
+            return room;
+        }
+
+        room.CurrentQuestionIndex++;
+        room.CurrentAnswers.Clear();
+        room.Status = GameStatus.QuestionActive;
+        return room;
     }
 
     public ScoreboardDto GetScoreboard(string gameCode)
@@ -132,6 +227,12 @@ public class GameRoomService
             GameCode = room.GameCode,
             Players = room.Players
                 .OrderByDescending(player => player.Score)
+                .Select(player => new ScoreboardPlayerDto
+                {
+                    PlayerId = player.PlayerId,
+                    Name = player.Name,
+                    Score = player.Score,
+                })
                 .ToList(),
         };
     }
@@ -147,6 +248,15 @@ public class GameRoomService
     {
         return GetRoom(gameCode)
             ?? throw new KeyNotFoundException($"Game room with code '{gameCode}' was not found.");
+    }
+
+    private static void EnsureHost(GameRoom room, string playerToken)
+    {
+        var player = room.Players.FirstOrDefault(current => current.PlayerToken == playerToken);
+        if (player is null || player.PlayerId != room.HostPlayerId)
+        {
+            throw new InvalidOperationException("Only the host can perform this action.");
+        }
     }
 
     private static string GenerateGameCode()

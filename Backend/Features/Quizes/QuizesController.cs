@@ -18,7 +18,8 @@ public class QuizesController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetQuizes(CancellationToken cancellationToken)
     {
-        return Ok(await _quizCatalog.GetQuizesAsync(cancellationToken));
+        var quizes = await _quizCatalog.GetQuizesAsync(cancellationToken);
+        return Ok(quizes.Select(QuizMapper.ToDto));
     }
 
     [HttpPost]
@@ -26,18 +27,11 @@ public class QuizesController : ControllerBase
         [FromBody] CreateQuizRequest request,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            var quiz = await _quizCatalog.CreateQuizAsync(
-                request.Title,
-                request.ThemeId,
-                request.QuestionsPerGame,
-                cancellationToken);
-            return Created($"/api/v1/quizes/{quiz.Id}", quiz);
-        }
-        catch (KeyNotFoundException)
-        {
-            return NotFound();
-        }
+        var quiz = await _quizCatalog.CreateQuizAsync(
+            request.Title,
+            request.ThemeId,
+            request.QuestionsPerGame,
+            cancellationToken);
+        return Created($"/api/v1/quizes/{quiz.Id}", QuizMapper.ToDto(quiz));
     }
 }

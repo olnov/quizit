@@ -18,6 +18,7 @@ public class AppDbContext : DbContext
     public DbSet<GameSession> GameSessions => Set<GameSession>();
     public DbSet<GameSessionPlayer> GameSessionPlayers => Set<GameSessionPlayer>();
     public DbSet<GameSessionQuestion> GameSessionQuestions => Set<GameSessionQuestion>();
+    public DbSet<GameSessionAnswer> GameSessionAnswers => Set<GameSessionAnswer>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -63,6 +64,21 @@ public class AppDbContext : DbContext
 
             entity.HasIndex(question => new { question.GameSessionId, question.Order })
                 .IsUnique();
+        });
+
+        modelBuilder.Entity<GameSessionAnswer>(entity =>
+        {
+            entity.HasOne<GameSession>()
+                .WithMany(session => session.Answers)
+                .HasForeignKey(answer => answer.GameSessionId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(answer => new
+            {
+                answer.GameSessionId,
+                answer.PlayerId,
+                answer.QuestionId,
+            }).IsUnique();
         });
     }
 }

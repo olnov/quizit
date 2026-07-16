@@ -17,7 +17,8 @@ public class QuizThemesController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetThemes(CancellationToken cancellationToken)
     {
-        return Ok(await _quizCatalog.GetThemesAsync(cancellationToken));
+        var themes = await _quizCatalog.GetThemesAsync(cancellationToken);
+        return Ok(themes.Select(QuizMapper.ToDto));
     }
 
     [HttpPost]
@@ -26,20 +27,14 @@ public class QuizThemesController : ControllerBase
         CancellationToken cancellationToken)
     {
         var theme = await _quizCatalog.CreateThemeAsync(request.Name, cancellationToken);
-        return Created($"/api/v1/quiz-themes/{theme.Id}", theme);
+        return Created($"/api/v1/quiz-themes/{theme.Id}", QuizMapper.ToDto(theme));
     }
 
     [HttpGet("{themeId:guid}/questions")]
     public async Task<IActionResult> GetQuestions(Guid themeId, CancellationToken cancellationToken)
     {
-        try
-        {
-            return Ok(await _quizCatalog.GetQuestionsAsync(themeId, cancellationToken));
-        }
-        catch (KeyNotFoundException)
-        {
-            return NotFound();
-        }
+        var questions = await _quizCatalog.GetQuestionsAsync(themeId, cancellationToken);
+        return Ok(questions.Select(QuizMapper.ToDto));
     }
 
     [HttpPost("{themeId:guid}/questions")]
@@ -48,25 +43,14 @@ public class QuizThemesController : ControllerBase
         [FromBody] CreateQuestionRequest request,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            var question = await _quizCatalog.CreateQuestionAsync(
-                themeId,
-                request.Text,
-                request.Difficulty,
-                request.Options,
-                request.CorrectOptionIndex,
-                cancellationToken);
+        var question = await _quizCatalog.CreateQuestionAsync(
+            themeId,
+            request.Text,
+            request.Difficulty,
+            request.Options,
+            request.CorrectOptionIndex,
+            cancellationToken);
 
-            return Created($"/api/v1/quiz-themes/{themeId}/questions/{question.Id}", question);
-        }
-        catch (KeyNotFoundException)
-        {
-            return NotFound();
-        }
-        catch (ArgumentException exception)
-        {
-            return BadRequest(new { error = exception.Message });
-        }
+        return Created($"/api/v1/quiz-themes/{themeId}/questions/{question.Id}", QuizMapper.ToDto(question));
     }
 }

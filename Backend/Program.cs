@@ -4,6 +4,7 @@ using Backend.Features.GameRooms;
 using Backend.Features.GameSessions;
 using Backend.Data;
 using Backend.Hubs;
+using Backend.Shared;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -33,6 +34,10 @@ builder.Services.AddScoped<GameSessionService>();
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
+
+app.UseMiddleware<ApiExceptionMiddleware>();
+
+app.UseMiddleware<ApiExceptionMiddleware>();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

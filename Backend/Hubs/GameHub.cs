@@ -1,4 +1,5 @@
 using Backend.Features.GameRooms;
+using Backend.Features.GameRooms.Dtos;
 using Microsoft.AspNetCore.SignalR;
 
 namespace Backend.Hubs;
@@ -12,13 +13,27 @@ public class GameHub : Hub
         _gameRoomService = gameRoomService;
     }
 
-    public async Task JoinGame(string gameCode, string playerName)
+    public async Task<JoinGameResponseDto> JoinGame(JoinGameRequest request)
     {
         try
         {
-            _gameRoomService.AddPlayer(gameCode, playerName, Context.ConnectionId);
-            await Groups.AddToGroupAsync(Context.ConnectionId, gameCode);
-            await BroadcastLobbyUpdated(gameCode);
+            var player = _gameRoomService.JoinPlayer(
+                request.GameCode,
+                request.PlayerName,
+                request.PlayerToken,
+                Context.ConnectionId);
+
+            await Groups.AddToGroupAsync(Context.ConnectionId, request.GameCode);
+            await BroadcastLobbyUpdated(request.GameCode);
+
+            var room = _gameRoomService.GetRoom(request.GameCode)
+                ?? throw new HubException("Game room was not found.");
+
+            return new JoinGameResponseDto
+            {
+                Room = GameRoomMapper.ToDto(room),
+                Credentials = GameRoomMapper.ToCredentials(player),
+            };
         }
         catch (KeyNotFoundException)
         {
@@ -42,19 +57,6 @@ public class GameHub : Hub
         var room = _gameRoomService.GetRoom(gameCode)
             ?? throw new HubException("Game room was not found.");
 
-        var players = room.Players.Select(player => new
-        {
-            player.PlayerId,
-            player.Name,
-            player.Score,
-            player.IsConnected,
-        });
-
-        return Clients.Group(gameCode).SendAsync("LobbyUpdated", new
-        {
-            room.GameCode,
-            room.Status,
-            Players = players,
-        });
+        return Clients.Group(gameCode).SendAsync("LobbyUpdated", GameRoomMapper.ToDto(room));
     }
 }

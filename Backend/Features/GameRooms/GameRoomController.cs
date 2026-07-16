@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Backend.Features.GameRooms.Dtos;
 using Backend.Features.GameSessions;
+using Backend.Hubs;
+using Microsoft.AspNetCore.SignalR;
 
 namespace Backend.Features.GameRooms;
 
@@ -10,13 +12,16 @@ public class GameRoomController : ControllerBase
 {
     private readonly GameRoomService _gameRoomService;
     private readonly GameSessionService _gameSessionService;
+    private readonly IHubContext<GameHub> _gameHubContext;
 
     public GameRoomController(
         GameRoomService gameRoomService,
-        GameSessionService gameSessionService)
+        GameSessionService gameSessionService,
+        IHubContext<GameHub> gameHubContext)
     {
         _gameRoomService = gameRoomService;
         _gameSessionService = gameSessionService;
+        _gameHubContext = gameHubContext;
     }
 
     [HttpGet(Name = "GetRoom")]
@@ -27,14 +32,20 @@ public class GameRoomController : ControllerBase
         {
             return NotFound();
         }
-        return Ok(room);
+        return Ok(GameRoomMapper.ToDto(room));
     }
 
     [HttpPost(Name = "CreateRoom")]
     public IActionResult CreateRoom([FromBody] CreateRoomRequest request)
     {
-        var room = _gameRoomService.CreateGameRoom(request.QuizId, request.HostName, request.ConnectionId);
-        return Ok(room);
+        var room = _gameRoomService.CreateGameRoom(request.QuizId, request.HostName);
+        var host = room.Players.Single(player => player.PlayerId == room.HostPlayerId);
+
+        return Created($"/api/v1/game-rooms/{room.GameCode}", new CreateRoomResponseDto
+        {
+            Room = GameRoomMapper.ToDto(room),
+            Credentials = GameRoomMapper.ToCredentials(host),
+        });
     }
 
     [HttpPost("{gameCode}/start")]
@@ -43,31 +54,131 @@ public class GameRoomController : ControllerBase
         [FromBody] StartGameRequest request,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            var room = _gameRoomService.GetRoom(gameCode)
-                ?? throw new KeyNotFoundException();
+        var room = _gameRoomService.GetRoom(gameCode)
+            ?? throw new KeyNotFoundException($"Game room with code '{gameCode}' was not found.");
 
-            if (room.HostPlayerId != request.HostPlayerId)
+        if (!_gameRoomService.IsHost(gameCode, request.PlayerToken))
+        {
+            return Forbid();
+        }
+
+        if (room.Status != GameStatus.Waiting)
+        {
+            throw new InvalidOperationException("The game room has already started.");
+        }
+
+        await _gameSessionService.CreateFromRoomAsync(room, cancellationToken);
+        var startedRoom = _gameRoomService.StartGame(gameCode, request.PlayerToken);
+        var response = GameRoomMapper.ToDto(startedRoom);
+        await _gameHubContext.Clients.Group(gameCode)
+            .SendAsync("GameStarted", response, cancellationToken);
+
+        return Ok(response);
+    }
+
+    [HttpPost("{gameCode}/questions/start")]
+    public async Task<IActionResult> BeginQuestion(
+        string gameCode,
+        [FromBody] NextQuestionRequest request,
+        CancellationToken cancellationToken)
+    {
+        var room = _gameRoomService.BeginQuestion(gameCode, request.PlayerToken);
+        var question = await _gameSessionService.GetCurrentQuestionAsync(room, cancellationToken);
+        await _gameHubContext.Clients.Group(gameCode)
+            .SendAsync("QuestionStarted", question, cancellationToken);
+
+        return Ok(question);
+    }
+
+    [HttpGet("{gameCode}/questions/current")]
+    public async Task<IActionResult> GetCurrentQuestion(
+        string gameCode,
+        CancellationToken cancellationToken)
+    {
+        var room = _gameRoomService.GetRoom(gameCode)
+            ?? throw new KeyNotFoundException($"Game room with code '{gameCode}' was not found.");
+        if (room.Status is not (GameStatus.QuestionActive or GameStatus.QuestionReveal))
+        {
+            throw new InvalidOperationException("There is no question to display at the current game stage.");
+        }
+
+        return Ok(await _gameSessionService.GetCurrentQuestionAsync(room, cancellationToken));
+    }
+
+    [HttpPost("{gameCode}/answers")]
+    public async Task<IActionResult> SubmitAnswer(
+        string gameCode,
+        [FromBody] SubmitAnswerRequest request,
+        CancellationToken cancellationToken)
+    {
+        var room = _gameRoomService.GetRoom(gameCode)
+            ?? throw new KeyNotFoundException($"Game room with code '{gameCode}' was not found.");
+        var player = _gameRoomService.GetPlayer(gameCode, request.PlayerToken);
+        var answer = await _gameSessionService.SubmitAnswerAsync(
+            room,
+            player.PlayerId,
+            request.AnswerOptionId,
+            cancellationToken);
+        _gameRoomService.SubmitAnswer(gameCode, answer);
+
+        return Ok(new AnswerAcceptedDto { QuestionId = answer.QuestionId });
+    }
+
+    [HttpPost("{gameCode}/questions/reveal")]
+    public async Task<IActionResult> RevealQuestion(
+        string gameCode,
+        [FromBody] RevealQuestionRequest request,
+        CancellationToken cancellationToken)
+    {
+        var room = _gameRoomService.RevealQuestion(gameCode, request.PlayerToken);
+        var reveal = await _gameSessionService.GetRevealAsync(room, cancellationToken);
+        await _gameHubContext.Clients.Group(gameCode)
+            .SendAsync("QuestionRevealed", reveal, cancellationToken);
+
+        return Ok(reveal);
+    }
+
+    [HttpPost("{gameCode}/scoreboard")]
+    public async Task<IActionResult> ShowScoreboard(
+        string gameCode,
+        [FromBody] NextQuestionRequest request,
+        CancellationToken cancellationToken)
+    {
+        _gameRoomService.ShowScoreboard(gameCode, request.PlayerToken);
+        var scoreboard = _gameRoomService.GetScoreboard(gameCode);
+        await _gameHubContext.Clients.Group(gameCode)
+            .SendAsync("ScoreboardUpdated", scoreboard, cancellationToken);
+
+        return Ok(scoreboard);
+    }
+
+    [HttpPost("{gameCode}/next")]
+    public async Task<IActionResult> NextQuestion(
+        string gameCode,
+        [FromBody] NextQuestionRequest request,
+        CancellationToken cancellationToken)
+    {
+        var room = _gameRoomService.NextQuestion(gameCode, request.PlayerToken);
+        if (room.Status == GameStatus.Completed)
+        {
+            await _gameSessionService.CompleteAsync(
+                room.GameSessionId ?? throw new InvalidOperationException("The game session was not found."),
+                room.Players,
+                cancellationToken);
+
+            var completed = new GameCompletedDto
             {
-                return Forbid();
-            }
+                GameCode = room.GameCode,
+                Players = _gameRoomService.GetScoreboard(gameCode).Players,
+            };
+            await _gameHubContext.Clients.Group(gameCode)
+                .SendAsync("GameCompleted", completed, cancellationToken);
+            return Ok(completed);
+        }
 
-            if (room.Status != GameStatus.Waiting)
-            {
-                return Conflict(new { error = "The game room has already started." });
-            }
-
-            await _gameSessionService.CreateFromRoomAsync(room, cancellationToken);
-            return Ok(_gameRoomService.StartGame(gameCode, request.HostPlayerId));
-        }
-        catch (KeyNotFoundException)
-        {
-            return NotFound();
-        }
-        catch (InvalidOperationException exception)
-        {
-            return BadRequest(new { error = exception.Message });
-        }
+        var question = await _gameSessionService.GetCurrentQuestionAsync(room, cancellationToken);
+        await _gameHubContext.Clients.Group(gameCode)
+            .SendAsync("QuestionStarted", question, cancellationToken);
+        return Ok(question);
     }
 }
