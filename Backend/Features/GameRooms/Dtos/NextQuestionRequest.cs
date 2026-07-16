@@ -1,6 +1,6 @@
 namespace Backend.Features.GameRooms.Dtos;
 
-public class StartGameRequest
+public class NextQuestionRequest
 {
     public required string PlayerToken { get; set; }
 }
