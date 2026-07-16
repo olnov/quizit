@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Backend.Features.Quizes;
+using Backend.Features.GameRooms;
+using Backend.Features.GameSessions;
 using Backend.Data;
 using Backend.Hubs;
 
@@ -13,7 +15,20 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 );
 builder.Services.AddControllers();
 builder.Services.AddSignalR();
-builder.Services.AddSingleton<QuizCatalog>();
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("Frontend", policy =>
+    {
+        policy
+            .WithOrigins("http://localhost:5173")
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
+    });
+});
+builder.Services.AddScoped<QuizCatalog>();
+builder.Services.AddSingleton<GameRoomService>();
+builder.Services.AddScoped<GameSessionService>();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
@@ -31,9 +46,11 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseCors("Frontend");
+
 app.UseAuthorization();
 
 app.MapControllers();
-app.MapHub<GameHub>("api/v1/hubs/game");
+app.MapHub<GameHub>("/api/v1/hubs/game");
 
 app.Run();

@@ -1,34 +1,53 @@
+using Backend.Data;
+using Microsoft.EntityFrameworkCore;
+
 namespace Backend.Features.Quizes;
 
 public class QuizCatalog
 {
-    private readonly Dictionary<Guid, QuizTheme> _themes = new();
-    private readonly Dictionary<Guid, Question> _questions = new();
-    private readonly Dictionary<Guid, Quiz> _quizes = new();
+    private readonly AppDbContext _dbContext;
 
-    public IReadOnlyCollection<QuizTheme> GetThemes() => _themes.Values.ToList();
+    public QuizCatalog(AppDbContext dbContext)
+    {
+        _dbContext = dbContext;
+    }
 
-    public QuizTheme CreateTheme(string name)
+    public async Task<IReadOnlyCollection<QuizTheme>> GetThemesAsync(CancellationToken cancellationToken)
+    {
+        return await _dbContext.QuizThemes
+            .OrderBy(theme => theme.Name)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<QuizTheme> CreateThemeAsync(string name, CancellationToken cancellationToken)
     {
         var theme = new QuizTheme { Name = name.Trim() };
-        _themes.Add(theme.Id, theme);
+        _dbContext.QuizThemes.Add(theme);
+        await _dbContext.SaveChangesAsync(cancellationToken);
         return theme;
     }
 
-    public IReadOnlyCollection<Question> GetQuestions(Guid themeId)
+    public async Task<IReadOnlyCollection<Question>> GetQuestionsAsync(
+        Guid themeId,
+        CancellationToken cancellationToken)
     {
-        EnsureThemeExists(themeId);
-        return _questions.Values.Where(question => question.ThemeId == themeId).ToList();
+        await EnsureThemeExistsAsync(themeId, cancellationToken);
+
+        return await _dbContext.Questions
+            .Where(question => question.ThemeId == themeId)
+            .Include(question => question.Options)
+            .ToListAsync(cancellationToken);
     }
 
-    public Question CreateQuestion(
+    public async Task<Question> CreateQuestionAsync(
         Guid themeId,
         string text,
         QuestionDifficulty difficulty,
         IReadOnlyList<string> optionTexts,
-        int correctOptionIndex)
+        int correctOptionIndex,
+        CancellationToken cancellationToken)
     {
-        EnsureThemeExists(themeId);
+        await EnsureThemeExistsAsync(themeId, cancellationToken);
 
         if (optionTexts.Count != 4)
         {
@@ -45,12 +64,18 @@ public class QuizCatalog
             throw new ArgumentException("Answer options cannot be empty.");
         }
 
+        var questionId = Guid.NewGuid();
         var options = optionTexts
-            .Select(optionText => new AnswerOption { Text = optionText.Trim() })
+            .Select(optionText => new AnswerOption
+            {
+                QuestionId = questionId,
+                Text = optionText.Trim(),
+            })
             .ToList();
 
         var question = new Question
         {
+            Id = questionId,
             ThemeId = themeId,
             Text = text.Trim(),
             Difficulty = difficulty,
@@ -58,15 +83,25 @@ public class QuizCatalog
             CorrectOptionId = options[correctOptionIndex].Id,
         };
 
-        _questions.Add(question.Id, question);
+        _dbContext.Questions.Add(question);
+        await _dbContext.SaveChangesAsync(cancellationToken);
         return question;
     }
 
-    public IReadOnlyCollection<Quiz> GetQuizes() => _quizes.Values.ToList();
-
-    public Quiz CreateQuiz(string title, Guid themeId, int questionsPerGame)
+    public async Task<IReadOnlyCollection<Quiz>> GetQuizesAsync(CancellationToken cancellationToken)
     {
-        EnsureThemeExists(themeId);
+        return await _dbContext.Quizes
+            .OrderBy(quiz => quiz.Title)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<Quiz> CreateQuizAsync(
+        string title,
+        Guid themeId,
+        int questionsPerGame,
+        CancellationToken cancellationToken)
+    {
+        await EnsureThemeExistsAsync(themeId, cancellationToken);
 
         var quiz = new Quiz
         {
@@ -75,13 +110,14 @@ public class QuizCatalog
             QuestionsPerGame = questionsPerGame,
         };
 
-        _quizes.Add(quiz.Id, quiz);
+        _dbContext.Quizes.Add(quiz);
+        await _dbContext.SaveChangesAsync(cancellationToken);
         return quiz;
     }
 
-    private void EnsureThemeExists(Guid themeId)
+    private async Task EnsureThemeExistsAsync(Guid themeId, CancellationToken cancellationToken)
     {
-        if (!_themes.ContainsKey(themeId))
+        if (!await _dbContext.QuizThemes.AnyAsync(theme => theme.Id == themeId, cancellationToken))
         {
             throw new KeyNotFoundException($"Quiz theme with id '{themeId}' was not found.");
         }

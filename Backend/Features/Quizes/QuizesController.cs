@@ -16,17 +16,23 @@ public class QuizesController : ControllerBase
     }
 
     [HttpGet]
-    public IActionResult GetQuizes()
+    public async Task<IActionResult> GetQuizes(CancellationToken cancellationToken)
     {
-        return Ok(_quizCatalog.GetQuizes());
+        return Ok(await _quizCatalog.GetQuizesAsync(cancellationToken));
     }
 
     [HttpPost]
-    public IActionResult CreateQuiz([FromBody] CreateQuizRequest request)
+    public async Task<IActionResult> CreateQuiz(
+        [FromBody] CreateQuizRequest request,
+        CancellationToken cancellationToken)
     {
         try
         {
-            var quiz = _quizCatalog.CreateQuiz(request.Title, request.ThemeId, request.QuestionsPerGame);
+            var quiz = await _quizCatalog.CreateQuizAsync(
+                request.Title,
+                request.ThemeId,
+                request.QuestionsPerGame,
+                cancellationToken);
             return Created($"/api/v1/quizes/{quiz.Id}", quiz);
         }
         catch (KeyNotFoundException)
