@@ -5,7 +5,7 @@ using Backend.Features.Quizes.Dtos;
 namespace Backend.Features.Quizes;
 
 [ApiController]
-[Route("api/quizes")]
+[Route("api/v1/quizes")]
 public class QuizesController : ControllerBase
 {
     private readonly QuizCatalog _quizCatalog;
@@ -27,7 +27,7 @@ public class QuizesController : ControllerBase
         try
         {
             var quiz = _quizCatalog.CreateQuiz(request.Title, request.ThemeId, request.QuestionsPerGame);
-            return Created($"/api/quizes/{quiz.Id}", quiz);
+            return Created($"/api/v1/quizes/{quiz.Id}", quiz);
         }
         catch (KeyNotFoundException)
         {

@@ -4,7 +4,7 @@ using Backend.Features.GameRooms.Dtos;
 namespace Backend.Features.GameRooms;
 
 [ApiController]
-[Route("api/game-rooms")]
+[Route("api/v1/game-rooms")]
 public class GameRoomController : ControllerBase
 {
     private readonly GameRoomService _gameRoomService;
