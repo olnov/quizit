@@ -4,7 +4,7 @@ using Backend.Features.Quizes.Dtos;
 namespace Backend.Features.Quizes;
 
 [ApiController]
-[Route("api/quiz-themes")]
+[Route("api/v1/quiz-themes")]
 public class QuizThemesController : ControllerBase
 {
     private readonly QuizCatalog _quizCatalog;
@@ -24,7 +24,7 @@ public class QuizThemesController : ControllerBase
     public IActionResult CreateTheme([FromBody] CreateQuizThemeRequest request)
     {
         var theme = _quizCatalog.CreateTheme(request.Name);
-        return Created($"/api/quiz-themes/{theme.Id}", theme);
+        return Created($"/api/v1/quiz-themes/{theme.Id}", theme);
     }
 
     [HttpGet("{themeId:guid}/questions")]
@@ -52,7 +52,7 @@ public class QuizThemesController : ControllerBase
                 request.Options,
                 request.CorrectOptionIndex);
 
-            return Created($"/api/quiz-themes/{themeId}/questions/{question.Id}", question);
+            return Created($"/api/v1/quiz-themes/{themeId}/questions/{question.Id}", question);
         }
         catch (KeyNotFoundException)
         {

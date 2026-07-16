@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Backend.Features.Quizes;
 using Backend.Data;
+using Backend.Hubs;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,6 +12,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
         builder.Configuration.GetConnectionString("Postgres"))
 );
 builder.Services.AddControllers();
+builder.Services.AddSignalR();
 builder.Services.AddSingleton<QuizCatalog>();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
@@ -31,5 +34,6 @@ app.UseHttpsRedirection();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<GameHub>("api/v1/hubs/game");
 
 app.Run();
