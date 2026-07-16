@@ -1,9 +1,14 @@
+using Microsoft.EntityFrameworkCore;
 using Backend.Features.Quizes;
+using Backend.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(
+        builder.Configuration.GetConnectionString("Postgres"))
+);
 builder.Services.AddControllers();
 builder.Services.AddSingleton<QuizCatalog>();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
