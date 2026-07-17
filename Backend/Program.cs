@@ -18,10 +18,13 @@ if (!string.IsNullOrWhiteSpace(port))
 }
 
 // Add services to the container.
+var postgresConnectionString = PostgresConnectionString.Normalize(
+    builder.Configuration.GetConnectionString("Postgres")
+    ?? builder.Configuration["DATABASE_URL"]
+    ?? throw new InvalidOperationException("PostgreSQL connection string is not configured."));
+
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(
-        builder.Configuration.GetConnectionString("Postgres"))
-);
+    options.UseNpgsql(postgresConnectionString));
 builder.Services.AddControllers();
 builder.Services.AddSignalR();
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
