@@ -23,20 +23,38 @@ public class GameSessionService
             .SingleOrDefaultAsync(current => current.Id == room.QuizId, cancellationToken)
             ?? throw new KeyNotFoundException($"Quiz with id '{room.QuizId}' was not found.");
 
-        var questionIds = await _dbContext.Questions
+        var questionCandidates = await _dbContext.Questions
             .Where(question => question.ThemeId == quiz.ThemeId)
-            .Select(question => question.Id)
+            .Select(question => new { question.Id, question.Difficulty })
             .ToListAsync(cancellationToken);
 
-        if (questionIds.Count < room.QuestionCount)
+        var selectedQuestionIds = room.QuestionSelectionMode switch
         {
-            throw new InvalidOperationException("The quiz theme does not contain enough questions.");
-        }
+            QuestionSelectionMode.AscendingDifficulty => questionCandidates
+                .OrderBy(question => question.Difficulty)
+                .ThenBy(question => question.Id)
+                .Take(room.QuestionCount)
+                .Select(question => question.Id)
+                .ToList(),
+            QuestionSelectionMode.SpecificDifficulty when room.SpecificDifficulty is not null => questionCandidates
+                .Where(question => question.Difficulty == room.SpecificDifficulty.Value)
+                .OrderBy(_ => Random.Shared.Next())
+                .Take(room.QuestionCount)
+                .Select(question => question.Id)
+                .ToList(),
+            QuestionSelectionMode.SpecificDifficulty => throw new InvalidOperationException("A specific difficulty is required for this question selection mode."),
+            QuestionSelectionMode.Mixed => questionCandidates
+                .OrderBy(_ => Random.Shared.Next())
+                .Take(room.QuestionCount)
+                .Select(question => question.Id)
+                .ToList(),
+            _ => throw new ArgumentOutOfRangeException(nameof(room.QuestionSelectionMode)),
+        };
 
-        var selectedQuestionIds = questionIds
-            .OrderBy(_ => Random.Shared.Next())
-            .Take(room.QuestionCount)
-            .ToList();
+        if (selectedQuestionIds.Count < room.QuestionCount)
+        {
+            throw new InvalidOperationException("The quiz does not contain enough questions for the selected difficulty filter.");
+        }
 
         var session = new GameSession
         {
@@ -233,14 +251,13 @@ public class GameSessionService
         return room.QuestionIds[room.CurrentQuestionIndex];
     }
 
-    private static int GetScore(QuestionDifficulty difficulty)
+    private static int GetScore(int difficulty)
     {
-        return difficulty switch
+        if (difficulty is < 0 or > 1_000 || difficulty % 100 != 0)
         {
-            QuestionDifficulty.Easy => 100,
-            QuestionDifficulty.Medium => 200,
-            QuestionDifficulty.Hard => 300,
-            _ => throw new ArgumentOutOfRangeException(nameof(difficulty)),
-        };
+            throw new ArgumentOutOfRangeException(nameof(difficulty));
+        }
+
+        return difficulty;
     }
 }

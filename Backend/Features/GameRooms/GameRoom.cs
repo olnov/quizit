@@ -10,6 +10,8 @@ public class GameRoom
     public Guid? GameSessionId { get; set; }
     public int QuestionCount { get; set; }
     public int? AnswerTimeLimitSeconds { get; set; }
+    public QuestionSelectionMode QuestionSelectionMode { get; set; } = QuestionSelectionMode.AscendingDifficulty;
+    public int? SpecificDifficulty { get; set; }
     public List<PlayerState> Players { get; set; } = new();
     public List<Guid> QuestionIds { get; set; } = new();
     public int CurrentQuestionIndex { get; set; } = -1;

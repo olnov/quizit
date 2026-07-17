@@ -12,8 +12,11 @@ public class GameRoomService
         Guid quizId,
         string hostName,
         int questionCount,
-        int? answerTimeLimitSeconds)
+        int? answerTimeLimitSeconds,
+        QuestionSelectionMode questionSelectionMode,
+        int? specificDifficulty)
     {
+        ValidateQuestionSelection(questionSelectionMode, specificDifficulty);
         var hostPlayer = new PlayerState
         {
             Name = hostName,
@@ -27,6 +30,8 @@ public class GameRoomService
             Players = new List<PlayerState> { hostPlayer },
             QuestionCount = questionCount,
             AnswerTimeLimitSeconds = answerTimeLimitSeconds,
+            QuestionSelectionMode = questionSelectionMode,
+            SpecificDifficulty = specificDifficulty,
         };
 
         if (!_rooms.TryAdd(room.GameCode, room))
@@ -169,8 +174,11 @@ public class GameRoomService
         string gameCode,
         string playerToken,
         int questionCount,
-        int? answerTimeLimitSeconds)
+        int? answerTimeLimitSeconds,
+        QuestionSelectionMode questionSelectionMode,
+        int? specificDifficulty)
     {
+        ValidateQuestionSelection(questionSelectionMode, specificDifficulty);
         var room = GetRequiredRoom(gameCode);
         EnsureHost(room, playerToken);
         if (room.Status != GameStatus.Waiting)
@@ -180,6 +188,8 @@ public class GameRoomService
 
         room.QuestionCount = questionCount;
         room.AnswerTimeLimitSeconds = answerTimeLimitSeconds;
+        room.QuestionSelectionMode = questionSelectionMode;
+        room.SpecificDifficulty = specificDifficulty;
         return room;
     }
 
@@ -379,6 +389,27 @@ public class GameRoomService
         if (player is null || player.PlayerId != room.HostPlayerId)
         {
             throw new InvalidOperationException("Only the host can perform this action.");
+        }
+    }
+
+    private static void ValidateQuestionSelection(
+        QuestionSelectionMode questionSelectionMode,
+        int? specificDifficulty)
+    {
+        if (!Enum.IsDefined(questionSelectionMode))
+        {
+            throw new ArgumentOutOfRangeException(nameof(questionSelectionMode));
+        }
+
+        if (questionSelectionMode == QuestionSelectionMode.SpecificDifficulty && specificDifficulty is null)
+        {
+            throw new ArgumentException("A specific difficulty is required for this question selection mode.", nameof(specificDifficulty));
+        }
+
+        if (specificDifficulty is not null
+            && (specificDifficulty is < 0 or > 1_000 || specificDifficulty % 100 != 0))
+        {
+            throw new ArgumentException("Specific difficulty must be between 0 and 1000 in increments of 100.", nameof(specificDifficulty));
         }
     }
 

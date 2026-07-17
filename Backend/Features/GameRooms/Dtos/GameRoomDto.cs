@@ -8,6 +8,8 @@ public class GameRoomDto
     public DateTime LobbyExpiresAt { get; set; }
     public int QuestionCount { get; set; }
     public int? AnswerTimeLimitSeconds { get; set; }
+    public QuestionSelectionMode QuestionSelectionMode { get; set; }
+    public int? SpecificDifficulty { get; set; }
     public DateTime? AnswerDeadlineAt { get; set; }
     public int CurrentQuestionIndex { get; set; }
     public List<RoomPlayerDto> Players { get; set; } = new();
