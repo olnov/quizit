@@ -40,3 +40,14 @@ npm run build
 You can preview the production build with `npm run preview`.
 
 > To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+
+## Deployment targets
+
+The project supports both Docker and Netlify builds:
+
+- Docker uses `@sveltejs/adapter-node` by default.
+- Netlify uses `@sveltejs/adapter-netlify` when the build variable
+  `DEPLOY_TARGET=netlify` is set.
+
+For a Netlify deployment, also set `VITE_API_BASE_URL` to the public Railway
+backend URL. It is embedded into the browser bundle at build time.
