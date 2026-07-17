@@ -52,3 +52,6 @@ The project supports both Docker and Netlify builds:
 
 For a Netlify deployment, also set `VITE_API_BASE_URL` to the public Railway
 backend URL. It is embedded into the browser bundle at build time.
+
+Netlify uses `netlify.toml` to publish the adapter's `build` directory, which
+contains the SvelteKit CSS and JavaScript assets.
