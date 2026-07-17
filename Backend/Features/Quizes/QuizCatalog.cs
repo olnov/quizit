@@ -42,6 +42,8 @@ public class QuizCatalog
     public async Task<Question> CreateQuestionAsync(
         Guid themeId,
         string text,
+        string? codeContext,
+        string? explanation,
         QuestionDifficulty difficulty,
         IReadOnlyList<string> optionTexts,
         int correctOptionIndex,
@@ -78,6 +80,8 @@ public class QuizCatalog
             Id = questionId,
             ThemeId = themeId,
             Text = text.Trim(),
+            CodeContext = string.IsNullOrWhiteSpace(codeContext) ? null : codeContext.Trim(),
+            Explanation = string.IsNullOrWhiteSpace(explanation) ? null : explanation.Trim(),
             Difficulty = difficulty,
             Options = options,
             CorrectOptionId = options[correctOptionIndex].Id,

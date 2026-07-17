@@ -6,6 +6,9 @@ public class GameRoomDto
     public Guid QuizId { get; set; }
     public GameStatus Status { get; set; }
     public DateTime LobbyExpiresAt { get; set; }
+    public int QuestionCount { get; set; }
+    public int? AnswerTimeLimitSeconds { get; set; }
+    public DateTime? AnswerDeadlineAt { get; set; }
     public int CurrentQuestionIndex { get; set; }
     public List<RoomPlayerDto> Players { get; set; } = new();
 }

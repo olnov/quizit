@@ -8,7 +8,11 @@ public class GameRoomService
 {
     private readonly ConcurrentDictionary<string, GameRoom> _rooms = new(StringComparer.OrdinalIgnoreCase);
 
-    public GameRoom CreateGameRoom(Guid quizId, string hostName)
+    public GameRoom CreateGameRoom(
+        Guid quizId,
+        string hostName,
+        int questionCount,
+        int? answerTimeLimitSeconds)
     {
         var hostPlayer = new PlayerState
         {
@@ -21,6 +25,8 @@ public class GameRoomService
             GameCode = GenerateGameCode(),
             HostPlayerId = hostPlayer.PlayerId,
             Players = new List<PlayerState> { hostPlayer },
+            QuestionCount = questionCount,
+            AnswerTimeLimitSeconds = answerTimeLimitSeconds,
         };
 
         if (!_rooms.TryAdd(room.GameCode, room))
@@ -96,11 +102,6 @@ public class GameRoomService
     {
         var room = GetRequiredRoom(gameCode);
 
-        if (room.Status != GameStatus.Waiting)
-        {
-            throw new InvalidOperationException("Players cannot join after the game has started.");
-        }
-
         var existingPlayer = room.Players.FirstOrDefault(player => player.PlayerToken == playerToken);
         if (existingPlayer is not null)
         {
@@ -108,6 +109,11 @@ public class GameRoomService
             existingPlayer.ConnectionId = connectionId;
             existingPlayer.IsConnected = true;
             return existingPlayer;
+        }
+
+        if (room.Status != GameStatus.Waiting)
+        {
+            throw new InvalidOperationException("Players cannot join after the game has started.");
         }
 
         var player = new PlayerState
@@ -159,6 +165,24 @@ public class GameRoomService
         return room;
     }
 
+    public GameRoom UpdateSettings(
+        string gameCode,
+        string playerToken,
+        int questionCount,
+        int? answerTimeLimitSeconds)
+    {
+        var room = GetRequiredRoom(gameCode);
+        EnsureHost(room, playerToken);
+        if (room.Status != GameStatus.Waiting)
+        {
+            throw new InvalidOperationException("Room settings can be changed only before the game starts.");
+        }
+
+        room.QuestionCount = questionCount;
+        room.AnswerTimeLimitSeconds = answerTimeLimitSeconds;
+        return room;
+    }
+
     public SubmittedAnswer SubmitAnswer(
         string gameCode,
         SubmittedAnswer answer
@@ -197,6 +221,9 @@ public class GameRoomService
 
         room.CurrentAnswers.Clear();
         room.Status = GameStatus.QuestionActive;
+        room.AnswerDeadlineAt = room.AnswerTimeLimitSeconds is null
+            ? null
+            : DateTime.UtcNow.AddSeconds(room.AnswerTimeLimitSeconds.Value);
         return room;
     }
 
@@ -205,13 +232,42 @@ public class GameRoomService
         var room = GetRequiredRoom(gameCode);
         EnsureHost(room, playerToken);
 
-        if (room.Status != GameStatus.QuestionActive)
+        EnsureQuestionCanBeRevealed(room);
+        RevealQuestion(room);
+        return room;
+    }
+
+    public bool TryRevealWhenAllConnectedPlayersAnswered(GameRoom room)
+    {
+        if (room.Status != GameStatus.QuestionActive || !HaveAllConnectedPlayersAnswered(room))
         {
-            throw new InvalidOperationException("The current question is not active.");
+            return false;
         }
 
-        room.Status = GameStatus.QuestionReveal;
-        return room;
+        RevealQuestion(room);
+        return true;
+    }
+
+    public IReadOnlyCollection<GameRoom> GetTimedOutQuestions()
+    {
+        return _rooms.Values
+            .Where(room => room.Status == GameStatus.QuestionActive
+                && room.AnswerDeadlineAt is not null
+                && room.AnswerDeadlineAt <= DateTime.UtcNow)
+            .ToList();
+    }
+
+    public bool TryRevealTimedOutQuestion(GameRoom room)
+    {
+        if (room.Status != GameStatus.QuestionActive
+            || room.AnswerDeadlineAt is null
+            || room.AnswerDeadlineAt > DateTime.UtcNow)
+        {
+            return false;
+        }
+
+        RevealQuestion(room);
+        return true;
     }
 
     public GameRoom ShowScoreboard(string gameCode, string playerToken)
@@ -233,9 +289,14 @@ public class GameRoomService
         var room = GetRequiredRoom(gameCode);
         EnsureHost(room, playerToken);
 
+        if (room.Status == GameStatus.QuestionReveal)
+        {
+            room.Status = GameStatus.Scoreboard;
+        }
+
         if (room.Status != GameStatus.Scoreboard)
         {
-            throw new InvalidOperationException("Show the scoreboard before moving to the next question.");
+            throw new InvalidOperationException("Reveal the answer before moving to the next question.");
         }
 
         if (room.CurrentQuestionIndex + 1 >= room.QuestionIds.Count)
@@ -274,6 +335,36 @@ public class GameRoomService
         var room = GetRequiredRoom(gameCode);
         room.Status = GameStatus.Completed;
         room.CompletedAt = DateTime.UtcNow;
+        room.AnswerDeadlineAt = null;
+    }
+
+    public GameRoom RestartRound(string gameCode, string playerToken)
+    {
+        var room = GetRequiredRoom(gameCode);
+        EnsureHost(room, playerToken);
+
+        if (room.Status != GameStatus.Completed)
+        {
+            throw new InvalidOperationException("Only a completed game can be restarted.");
+        }
+
+        room.GameId = Guid.NewGuid().ToString();
+        room.GameSessionId = null;
+        room.Status = GameStatus.Waiting;
+        room.QuestionIds.Clear();
+        room.CurrentAnswers.Clear();
+        room.CurrentQuestionIndex = -1;
+        room.StartedAt = null;
+        room.CompletedAt = null;
+        room.AnswerDeadlineAt = null;
+        room.LobbyExpiresAt = DateTime.UtcNow.AddMinutes(10);
+
+        foreach (var player in room.Players)
+        {
+            player.Score = 0;
+        }
+
+        return room;
     }
 
     private GameRoom GetRequiredRoom(string gameCode)
@@ -289,6 +380,33 @@ public class GameRoomService
         {
             throw new InvalidOperationException("Only the host can perform this action.");
         }
+    }
+
+    private static bool HaveAllConnectedPlayersAnswered(GameRoom room)
+    {
+        return room.Players
+            .Where(player => player.IsConnected)
+            .All(player => room.CurrentAnswers.ContainsKey(player.PlayerId));
+    }
+
+    private static void EnsureQuestionCanBeRevealed(GameRoom room)
+    {
+        if (room.Status != GameStatus.QuestionActive)
+        {
+            throw new InvalidOperationException("The current question is not active.");
+        }
+
+        if (!HaveAllConnectedPlayersAnswered(room)
+            && (room.AnswerDeadlineAt is null || room.AnswerDeadlineAt > DateTime.UtcNow))
+        {
+            throw new InvalidOperationException("The question can be revealed only after all connected players answer or the timer expires.");
+        }
+    }
+
+    private static void RevealQuestion(GameRoom room)
+    {
+        room.Status = GameStatus.QuestionReveal;
+        room.AnswerDeadlineAt = null;
     }
 
     private static bool IsExpiredWaitingRoom(GameRoom room)

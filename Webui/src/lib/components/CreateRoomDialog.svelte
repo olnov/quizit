@@ -6,11 +6,13 @@
 	import TextField from '$lib/components/ui/TextField.svelte';
 	import { createRoom, getQuizzes, saveRoomSession } from '$lib/game-room';
 
-	type Quiz = { id: string; title: string };
+	type Quiz = { id: string; title: string; questionsPerGame: number };
 
 	let hostName = $state('');
 	let quizzes = $state<Quiz[]>([]);
 	let quizId = $state('');
+	let questionCount = $state(1);
+	let answerTimeLimitSeconds = $state<number | null>(null);
 	let message = $state('');
 	let creating = $state(false);
 
@@ -18,6 +20,7 @@
 		try {
 			quizzes = await getQuizzes();
 			quizId = quizzes[0]?.id ?? '';
+			questionCount = quizzes[0]?.questionsPerGame ?? 1;
 			if (quizzes.length === 0) {
 				message = 'There are no quizzes yet. Create a quiz before opening a room.';
 			}
@@ -40,7 +43,7 @@
 		creating = true;
 		message = '';
 		try {
-			const response = await createRoom(quizId, hostName.trim());
+			const response = await createRoom(quizId, hostName.trim(), questionCount, answerTimeLimitSeconds);
 			saveRoomSession(response.room.gameCode, {
 				...response.credentials,
 				playerName: hostName.trim(),
@@ -84,6 +87,19 @@
 						{/if}
 					</select>
 				</label>
+				<label class="select-field">
+					<span>Questions in this round</span>
+					<input type="number" min="1" max={quizzes.find((quiz) => quiz.id === quizId)?.questionsPerGame ?? 1} bind:value={questionCount} />
+				</label>
+				<label class="select-field">
+					<span>Answer time</span>
+					<select value={answerTimeLimitSeconds ?? 'unlimited'} onchange={(event) => { const value = event.currentTarget.value; answerTimeLimitSeconds = value === 'unlimited' ? null : Number(value); }}>
+						<option value="15">15 seconds</option>
+						<option value="30">30 seconds</option>
+						<option value="60">60 seconds</option>
+						<option value="unlimited">Unlimited</option>
+					</select>
+				</label>
 				<Button type="submit" class="submit-button" disabled={creating}>
 					{creating ? 'Creating...' : 'Create room'}
 				</Button>
@@ -99,7 +115,7 @@
 	:global(.game-dialog #create-room-description) { color: var(--color-muted); line-height: 1.55; margin: 0 0 24px; }
 	form { display: grid; gap: 18px; }
 	.select-field { color: var(--color-ink); display: grid; font-size: 0.875rem; font-weight: 700; gap: 7px; }
-	select { appearance: none; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-sm); color: var(--color-ink); font: inherit; min-height: 46px; padding: 0 13px; }
+	select, input { appearance: none; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-sm); color: var(--color-ink); font: inherit; min-height: 46px; padding: 0 13px; }
 	:global(.submit-button) { margin-top: 4px; width: 100%; }
 	.message { color: var(--color-muted); font-size: 0.875rem; line-height: 1.4; margin: -4px 0 0; }
 </style>

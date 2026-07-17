@@ -6,4 +6,5 @@ public class RoomPlayerDto
     public string Name { get; set; } = string.Empty;
     public int Score { get; set; }
     public bool IsConnected { get; set; }
+    public bool HasAnswered { get; set; }
 }

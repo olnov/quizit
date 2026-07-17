@@ -8,6 +8,8 @@ public class GameRoom
     public GameStatus Status { get; set; } = GameStatus.Waiting;
     public string HostPlayerId { get; set; } = string.Empty;
     public Guid? GameSessionId { get; set; }
+    public int QuestionCount { get; set; }
+    public int? AnswerTimeLimitSeconds { get; set; }
     public List<PlayerState> Players { get; set; } = new();
     public List<Guid> QuestionIds { get; set; } = new();
     public int CurrentQuestionIndex { get; set; } = -1;
@@ -15,5 +17,6 @@ public class GameRoom
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime LobbyExpiresAt { get; set; } = DateTime.UtcNow.AddMinutes(10);
     public DateTime? StartedAt { get; set; }
+    public DateTime? AnswerDeadlineAt { get; set; }
     public DateTime? CompletedAt { get; set; }
 }
