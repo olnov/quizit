@@ -12,12 +12,17 @@ frontend. Do not deploy the root `docker-compose.yml`; it is for local use.
   service name:
 
 ```dotenv
-ConnectionStrings__Postgres=Host=${{Postgres.PGHOST}};Port=${{Postgres.PGPORT}};Database=${{Postgres.PGDATABASE}};Username=${{Postgres.PGUSER}};Password=${{Postgres.PGPASSWORD}}
+DATABASE_URL=${{Postgres.DATABASE_URL}}
 Cors__AllowedOrigins__0=https://<frontend-domain>
 Database__SeedDemoData=false
 ```
 
-`PORT` and `RAILWAY_ENVIRONMENT` are supplied by Railway. The backend reads
+The backend accepts both Npgsql `Host=...;Database=...` strings and Railway's
+`postgresql://...` format. Add the variable through Railway's **Add reference**
+control, selecting `DATABASE_URL` from the PostgreSQL service; replace
+`Postgres` above with that service's exact name. The backend reads
+`ConnectionStrings__Postgres` first, then `DATABASE_PRIVATE_URL`, then
+`DATABASE_URL`. `PORT` and `RAILWAY_ENVIRONMENT` are supplied by Railway. The backend reads
 `PORT`, binds to all interfaces, trusts Railway's forwarded HTTPS headers, and
 exposes `GET /health` for a Railway health check.
 
