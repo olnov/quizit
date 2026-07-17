@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.HttpOverrides;
 using Backend.Features.Quizes;
 using Backend.Features.GameRooms;
 using Backend.Features.GameSessions;
@@ -9,6 +10,12 @@ using Backend.Data.Seeds;
 
 
 var builder = WebApplication.CreateBuilder(args);
+
+var port = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrWhiteSpace(port))
+{
+    builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+}
 
 // Add services to the container.
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -40,6 +47,20 @@ builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
+var isRailway = !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("RAILWAY_ENVIRONMENT"));
+if (isRailway)
+{
+    var forwardedHeadersOptions = new ForwardedHeadersOptions
+    {
+        ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+    };
+
+    // Railway terminates TLS before forwarding requests to the container.
+    forwardedHeadersOptions.KnownIPNetworks.Clear();
+    forwardedHeadersOptions.KnownProxies.Clear();
+    app.UseForwardedHeaders(forwardedHeadersOptions);
+}
+
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -63,7 +84,10 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-app.UseHttpsRedirection();
+if (!app.Environment.IsProduction() || isRailway)
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseCors("Frontend");
 
@@ -71,5 +95,6 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.MapHub<GameHub>("/api/v1/hubs/game");
+app.MapGet("/health", () => Results.Ok()).AllowAnonymous();
 
 app.Run();
