@@ -30,6 +30,7 @@ public static class QuizMapper
         {
             Id = question.Id,
             Text = question.Text,
+            CodeContext = question.CodeContext,
             Difficulty = question.Difficulty,
             Options = question.Options.Select(option => new AnswerOptionDto
             {

@@ -4,4 +4,5 @@ public class RevealQuestionDto
 {
     public Guid QuestionId { get; set; }
     public Guid CorrectOptionId { get; set; }
+    public string? Explanation { get; set; }
 }

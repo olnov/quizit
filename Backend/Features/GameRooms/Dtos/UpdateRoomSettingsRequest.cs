@@ -2,10 +2,9 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Backend.Features.GameRooms.Dtos;
 
-public class CreateRoomRequest
+public class UpdateRoomSettingsRequest
 {
-    public Guid QuizId { get; set; }
-    public required string HostName { get; set; }
+    public required string PlayerToken { get; set; }
     [Range(1, 100)]
     public int QuestionCount { get; set; }
     [Range(5, 3600)]

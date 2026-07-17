@@ -46,6 +46,8 @@ public class QuizThemesController : ControllerBase
         var question = await _quizCatalog.CreateQuestionAsync(
             themeId,
             request.Text,
+            request.CodeContext,
+            request.Explanation,
             request.Difficulty,
             request.Options,
             request.CorrectOptionIndex,

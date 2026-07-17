@@ -7,6 +7,7 @@
 		getRoomSession,
 		saveRoomSession,
 		startRoom,
+		updateRoomSettings,
 		type GameRoom,
 		type RoomSession
 	} from '$lib/game-room';
@@ -17,6 +18,8 @@
 	let message = $state('Connecting to the lobby...');
 	let now = $state(Date.now());
 	let starting = $state(false);
+	let questionCount = $state(1);
+	let answerTimeLimitSeconds = $state<number | null>(null);
 
 	let remainingSeconds = $derived(room ? Math.max(0, Math.ceil((Date.parse(room.lobbyExpiresAt) - now) / 1000)) : 0);
 	let connectedGuests = $derived(room?.players.filter((player) => player.isConnected && player.playerId !== session?.playerId).length ?? 0);
@@ -37,13 +40,16 @@
 			params.gameCode,
 			savedSession,
 			(updatedRoom) => {
-				if (isMounted) room = updatedRoom;
+				if (isMounted) { room = updatedRoom; questionCount = updatedRoom.questionCount; answerTimeLimitSeconds = updatedRoom.answerTimeLimitSeconds; }
 			},
 			(credentials) => {
 				if (!isMounted) return;
 				session = { ...savedSession, ...credentials };
 				saveRoomSession(params.gameCode, session);
 				message = '';
+			},
+			{
+				onGameStarted: () => { void goto(`/game/${params.gameCode}`); }
 			}
 		).catch((error) => {
 			message = error instanceof Error ? error.message : 'Unable to join the lobby.';
@@ -61,8 +67,8 @@
 		starting = true;
 		message = '';
 		try {
-			room = await startRoom(params.gameCode, session.playerToken);
-			message = 'Game started. The game screen is the next frontend step.';
+			await updateRoomSettings(params.gameCode, session.playerToken, questionCount, answerTimeLimitSeconds);
+			await startRoom(params.gameCode, session.playerToken);
 		} catch (error) {
 			message = error instanceof Error ? error.message : 'Unable to start the game.';
 		} finally {
@@ -98,6 +104,10 @@
 					<strong>{formatRemaining(remainingSeconds)}</strong>
 				</div>
 				{#if session?.isHost}
+					<div class="round-settings">
+						<label>Questions <input type="number" min="1" max="100" bind:value={questionCount} /></label>
+						<label>Answer time <select value={answerTimeLimitSeconds ?? 'unlimited'} onchange={(event) => { const value = event.currentTarget.value; answerTimeLimitSeconds = value === 'unlimited' ? null : Number(value); }}><option value="15">15 sec</option><option value="30">30 sec</option><option value="60">60 sec</option><option value="unlimited">Unlimited</option></select></label>
+					</div>
 					<p class="host-note">
 						{connectedGuests > 0
 							? `${connectedGuests} player${connectedGuests === 1 ? '' : 's'} connected. You can start the game.`
@@ -150,6 +160,9 @@
 	.timer strong { font-size: 1.08rem; letter-spacing: .04em; }
 	.timer.expired { background: #f5c9c2; }
 	.host-note { color: var(--color-muted); line-height: 1.55; margin: 25px 0 18px; max-width: 440px; }
+	.round-settings { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
+	.round-settings label { color: var(--color-muted); display: grid; font-size: .75rem; font-weight: 800; gap: 6px; letter-spacing: .06em; text-transform: uppercase; }
+	.round-settings input, .round-settings select { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-sm); color: var(--color-ink); min-height: 40px; padding: 0 10px; }
 	:global(.start-button) { min-width: 192px; }
 	.lobby-message { color: var(--color-muted); font-size: .9rem; line-height: 1.5; margin-top: 18px; max-width: 450px; }
 	.players-panel { background: var(--color-ink); box-shadow: 12px 12px 0 var(--color-lime); color: #f7f7f2; min-height: 420px; padding: 28px; }

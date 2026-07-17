@@ -12,6 +12,9 @@ public static class GameRoomMapper
             QuizId = room.QuizId,
             Status = room.Status,
             LobbyExpiresAt = room.LobbyExpiresAt,
+            QuestionCount = room.QuestionCount,
+            AnswerTimeLimitSeconds = room.AnswerTimeLimitSeconds,
+            AnswerDeadlineAt = room.AnswerDeadlineAt,
             CurrentQuestionIndex = room.CurrentQuestionIndex,
             Players = room.Players.Select(player => new RoomPlayerDto
             {
@@ -19,6 +22,7 @@ public static class GameRoomMapper
                 Name = player.Name,
                 Score = player.Score,
                 IsConnected = player.IsConnected,
+                HasAnswered = room.CurrentAnswers.ContainsKey(player.PlayerId),
             }).ToList(),
         };
     }

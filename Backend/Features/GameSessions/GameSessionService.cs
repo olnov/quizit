@@ -28,14 +28,14 @@ public class GameSessionService
             .Select(question => question.Id)
             .ToListAsync(cancellationToken);
 
-        if (questionIds.Count < quiz.QuestionsPerGame)
+        if (questionIds.Count < room.QuestionCount)
         {
             throw new InvalidOperationException("The quiz theme does not contain enough questions.");
         }
 
         var selectedQuestionIds = questionIds
             .OrderBy(_ => Random.Shared.Next())
-            .Take(quiz.QuestionsPerGame)
+            .Take(room.QuestionCount)
             .ToList();
 
         var session = new GameSession
@@ -99,6 +99,7 @@ public class GameSessionService
         return new CurrentQuestionDto
         {
             Index = room.CurrentQuestionIndex,
+            AnswerDeadlineAt = room.AnswerDeadlineAt,
             Question = QuizMapper.ToDto(question),
         };
     }
@@ -184,6 +185,7 @@ public class GameSessionService
         {
             QuestionId = questionId,
             CorrectOptionId = question.CorrectOptionId,
+            Explanation = question.Explanation,
         };
     }
 

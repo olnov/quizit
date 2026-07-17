@@ -38,7 +38,11 @@ public class GameRoomController : ControllerBase
     [HttpPost(Name = "CreateRoom")]
     public IActionResult CreateRoom([FromBody] CreateRoomRequest request)
     {
-        var room = _gameRoomService.CreateGameRoom(request.QuizId, request.HostName);
+        var room = _gameRoomService.CreateGameRoom(
+            request.QuizId,
+            request.HostName,
+            request.QuestionCount,
+            request.AnswerTimeLimitSeconds);
         var host = room.Players.Single(player => player.PlayerId == room.HostPlayerId);
 
         return Created($"/api/v1/game-rooms/{room.GameCode}", new CreateRoomResponseDto
@@ -65,10 +69,14 @@ public class GameRoomController : ControllerBase
         _gameRoomService.EnsureCanStartGame(gameCode, request.PlayerToken);
 
         await _gameSessionService.CreateFromRoomAsync(room, cancellationToken);
-        var startedRoom = _gameRoomService.StartGame(gameCode, request.PlayerToken);
+        _gameRoomService.StartGame(gameCode, request.PlayerToken);
+        var startedRoom = _gameRoomService.BeginQuestion(gameCode, request.PlayerToken);
         var response = GameRoomMapper.ToDto(startedRoom);
         await _gameHubContext.Clients.Group(gameCode)
             .SendAsync("GameStarted", response, cancellationToken);
+        var question = await _gameSessionService.GetCurrentQuestionAsync(startedRoom, cancellationToken);
+        await _gameHubContext.Clients.Group(gameCode)
+            .SendAsync("QuestionStarted", question, cancellationToken);
 
         return Ok(response);
     }
@@ -83,6 +91,8 @@ public class GameRoomController : ControllerBase
         var question = await _gameSessionService.GetCurrentQuestionAsync(room, cancellationToken);
         await _gameHubContext.Clients.Group(gameCode)
             .SendAsync("QuestionStarted", question, cancellationToken);
+        await _gameHubContext.Clients.Group(gameCode)
+            .SendAsync("RoomUpdated", GameRoomMapper.ToDto(room), cancellationToken);
 
         return Ok(question);
     }
@@ -118,6 +128,17 @@ public class GameRoomController : ControllerBase
             cancellationToken);
         _gameRoomService.SubmitAnswer(gameCode, answer);
 
+        var questionRevealed = _gameRoomService.TryRevealWhenAllConnectedPlayersAnswered(room);
+        await _gameHubContext.Clients.Group(gameCode)
+            .SendAsync("RoomUpdated", GameRoomMapper.ToDto(room), cancellationToken);
+
+        if (questionRevealed)
+        {
+            var reveal = await _gameSessionService.GetRevealAsync(room, cancellationToken);
+            await _gameHubContext.Clients.Group(gameCode)
+                .SendAsync("QuestionRevealed", reveal, cancellationToken);
+        }
+
         return Ok(new AnswerAcceptedDto { QuestionId = answer.QuestionId });
     }
 
@@ -131,6 +152,8 @@ public class GameRoomController : ControllerBase
         var reveal = await _gameSessionService.GetRevealAsync(room, cancellationToken);
         await _gameHubContext.Clients.Group(gameCode)
             .SendAsync("QuestionRevealed", reveal, cancellationToken);
+        await _gameHubContext.Clients.Group(gameCode)
+            .SendAsync("RoomUpdated", GameRoomMapper.ToDto(room), cancellationToken);
 
         return Ok(reveal);
     }
@@ -145,6 +168,8 @@ public class GameRoomController : ControllerBase
         var scoreboard = _gameRoomService.GetScoreboard(gameCode);
         await _gameHubContext.Clients.Group(gameCode)
             .SendAsync("ScoreboardUpdated", scoreboard, cancellationToken);
+        await _gameHubContext.Clients.Group(gameCode)
+            .SendAsync("RoomUpdated", GameRoomMapper.ToDto(_gameRoomService.GetRoom(gameCode)!), cancellationToken);
 
         return Ok(scoreboard);
     }
@@ -176,6 +201,68 @@ public class GameRoomController : ControllerBase
         var question = await _gameSessionService.GetCurrentQuestionAsync(room, cancellationToken);
         await _gameHubContext.Clients.Group(gameCode)
             .SendAsync("QuestionStarted", question, cancellationToken);
+        await _gameHubContext.Clients.Group(gameCode)
+            .SendAsync("RoomUpdated", GameRoomMapper.ToDto(room), cancellationToken);
         return Ok(question);
+    }
+
+    [HttpPost("{gameCode}/settings")]
+    public async Task<IActionResult> UpdateSettings(
+        string gameCode,
+        [FromBody] UpdateRoomSettingsRequest request,
+        CancellationToken cancellationToken)
+    {
+        var room = _gameRoomService.UpdateSettings(
+            gameCode,
+            request.PlayerToken,
+            request.QuestionCount,
+            request.AnswerTimeLimitSeconds);
+        var response = GameRoomMapper.ToDto(room);
+        await _gameHubContext.Clients.Group(gameCode)
+            .SendAsync("LobbyUpdated", response, cancellationToken);
+        return Ok(response);
+    }
+
+    [HttpPost("{gameCode}/complete")]
+    public async Task<IActionResult> CompleteGame(
+        string gameCode,
+        [FromBody] StartGameRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (!_gameRoomService.IsHost(gameCode, request.PlayerToken))
+        {
+            return Forbid();
+        }
+
+        var room = _gameRoomService.GetRoom(gameCode)
+            ?? throw new KeyNotFoundException($"Game room with code '{gameCode}' was not found.");
+        _gameRoomService.CompleteGame(gameCode);
+        await _gameSessionService.CompleteAsync(
+            room.GameSessionId ?? throw new InvalidOperationException("The game session was not found."),
+            room.Players,
+            cancellationToken);
+
+        var completed = new GameCompletedDto
+        {
+            GameCode = room.GameCode,
+            Players = _gameRoomService.GetScoreboard(gameCode).Players,
+        };
+        await _gameHubContext.Clients.Group(gameCode)
+            .SendAsync("GameCompleted", completed, cancellationToken);
+
+        return Ok(completed);
+    }
+
+    [HttpPost("{gameCode}/restart")]
+    public async Task<IActionResult> RestartRound(
+        string gameCode,
+        [FromBody] StartGameRequest request,
+        CancellationToken cancellationToken)
+    {
+        var room = _gameRoomService.RestartRound(gameCode, request.PlayerToken);
+        var response = GameRoomMapper.ToDto(room);
+        await _gameHubContext.Clients.Group(gameCode)
+            .SendAsync("LobbyUpdated", response, cancellationToken);
+        return Ok(response);
     }
 }

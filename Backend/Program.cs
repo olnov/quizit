@@ -31,6 +31,7 @@ builder.Services.AddCors(options =>
 builder.Services.AddScoped<QuizCatalog>();
 builder.Services.AddSingleton<GameRoomService>();
 builder.Services.AddHostedService<GameRoomCleanupService>();
+builder.Services.AddHostedService<GameQuestionTimeoutService>();
 builder.Services.AddScoped<GameSessionService>();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();

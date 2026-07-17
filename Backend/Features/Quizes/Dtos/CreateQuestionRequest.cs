@@ -9,6 +9,12 @@ public class CreateQuestionRequest
     [MaxLength(1_000)]
     public string Text { get; set; } = string.Empty;
 
+    [MaxLength(5_000)]
+    public string? CodeContext { get; set; }
+
+    [MaxLength(2_000)]
+    public string? Explanation { get; set; }
+
     public QuestionDifficulty Difficulty { get; set; }
 
     [Required]

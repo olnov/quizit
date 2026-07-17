@@ -164,6 +164,12 @@ namespace Backend.Migrations
                     b.Property<Guid>("CorrectOptionId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Explanation")
+                        .HasColumnType("text");
+
+                    b.Property<string>("CodeContext")
+                        .HasColumnType("text");
+
                     b.Property<int>("Difficulty")
                         .HasColumnType("integer");
 
