@@ -4,6 +4,8 @@ import adapterNetlify from '@sveltejs/adapter-netlify';
 import adapterNode from '@sveltejs/adapter-node';
 import { sveltekit } from '@sveltejs/kit/vite';
 
+const isNetlifyBuild = process.env.DEPLOY_TARGET === 'netlify' || process.env.NETLIFY === 'true';
+
 export default defineConfig({
 	plugins: [
 		sveltekit({
@@ -12,7 +14,7 @@ export default defineConfig({
 				runes: ({ filename }) =>
 					filename.split(/[/\\]/).includes('node_modules') ? undefined : true
 			},
-			adapter: process.env.DEPLOY_TARGET === 'netlify' ? adapterNetlify() : adapterNode()
+			adapter: isNetlifyBuild ? adapterNetlify() : adapterNode()
 		})
 	],
 	test: {

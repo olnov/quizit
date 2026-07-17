@@ -46,8 +46,9 @@ You can preview the production build with `npm run preview`.
 The project supports both Docker and Netlify builds:
 
 - Docker uses `@sveltejs/adapter-node` by default.
-- Netlify uses `@sveltejs/adapter-netlify` when the build variable
-  `DEPLOY_TARGET=netlify` is set.
+- Netlify uses `@sveltejs/adapter-netlify` automatically through Netlify's
+  `NETLIFY=true` build variable. `DEPLOY_TARGET=netlify` is also supported for
+  local verification.
 
 For a Netlify deployment, also set `VITE_API_BASE_URL` to the public Railway
 backend URL. It is embedded into the browser bundle at build time.
