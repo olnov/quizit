@@ -17,12 +17,14 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 );
 builder.Services.AddControllers();
 builder.Services.AddSignalR();
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+    ?? ["http://localhost:5173", "http://127.0.0.1:5173"];
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("Frontend", policy =>
     {
         policy
-            .WithOrigins("http://localhost:5173", "http://127.0.0.1:5173")
+            .WithOrigins(allowedOrigins)
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
@@ -38,17 +40,22 @@ builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
-app.UseMiddleware<ApiExceptionMiddleware>();
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    await dbContext.Database.MigrateAsync();
+
+    if (app.Environment.IsDevelopment() || builder.Configuration.GetValue<bool>("Database:SeedDemoData"))
+    {
+        await DevelopmentDataSeeder.SeedAsync(dbContext, CancellationToken.None);
+    }
+}
 
 app.UseMiddleware<ApiExceptionMiddleware>();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    using var scope = app.Services.CreateScope();
-    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    await DevelopmentDataSeeder.SeedAsync(dbContext, CancellationToken.None);
-
     app.MapOpenApi();
     app.UseSwaggerUI(options =>
     {
