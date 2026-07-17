@@ -14,7 +14,6 @@ RUN apt-get update \
     && apt-get install --yes --no-install-recommends libgssapi-krb5-2 \
     && rm -rf /var/lib/apt/lists/*
 
-ENV ASPNETCORE_URLS=http://+:8080
 ENV ASPNETCORE_ENVIRONMENT=Production
 
 COPY --from=build /app/publish ./
