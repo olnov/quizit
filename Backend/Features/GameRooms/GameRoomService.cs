@@ -1,11 +1,12 @@
 
+using System.Collections.Concurrent;
 using Backend.Features.GameRooms.Dtos;
 
 namespace Backend.Features.GameRooms;
 
 public class GameRoomService
 {
-    private readonly Dictionary<string, GameRoom> _rooms = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, GameRoom> _rooms = new(StringComparer.OrdinalIgnoreCase);
 
     public GameRoom CreateGameRoom(Guid quizId, string hostName)
     {
@@ -22,14 +23,55 @@ public class GameRoomService
             Players = new List<PlayerState> { hostPlayer },
         };
 
-        _rooms[room.GameCode] = room;
+        if (!_rooms.TryAdd(room.GameCode, room))
+        {
+            throw new InvalidOperationException("Unable to create a unique game room code.");
+        }
 
         return room;
     }
 
     public GameRoom? GetRoom(string gameCode)
     {
-        return _rooms.TryGetValue(gameCode, out var room) ? room : null;
+        if (!_rooms.TryGetValue(gameCode, out var room))
+        {
+            return null;
+        }
+
+        if (IsExpiredWaitingRoom(room))
+        {
+            _rooms.TryRemove(gameCode, out _);
+            return null;
+        }
+
+        return room;
+    }
+
+    public void CleanupExpiredRooms()
+    {
+        foreach (var (gameCode, room) in _rooms)
+        {
+            if (IsExpiredWaitingRoom(room))
+            {
+                _rooms.TryRemove(gameCode, out _);
+            }
+        }
+    }
+
+    public void EnsureCanStartGame(string gameCode, string playerToken)
+    {
+        var room = GetRequiredRoom(gameCode);
+        EnsureHost(room, playerToken);
+
+        if (room.Status != GameStatus.Waiting)
+        {
+            throw new InvalidOperationException("The game room has already started.");
+        }
+
+        if (!room.Players.Any(player => player.PlayerId != room.HostPlayerId && player.IsConnected))
+        {
+            throw new InvalidOperationException("At least one connected player is required to start the game.");
+        }
     }
 
     public bool IsHost(string gameCode, string playerToken)
@@ -108,17 +150,7 @@ public class GameRoomService
     public GameRoom StartGame(string gameCode, string playerToken)
     {
         var room = GetRequiredRoom(gameCode);
-
-        var player = room.Players.FirstOrDefault(current => current.PlayerToken == playerToken);
-        if (player is null || room.HostPlayerId != player.PlayerId)
-        {
-            throw new InvalidOperationException("Only the host can start the game.");
-        }
-
-        if (room.Status != GameStatus.Waiting)
-        {
-            throw new InvalidOperationException("The game room has already started.");
-        }
+        EnsureCanStartGame(gameCode, playerToken);
 
         room.Status = GameStatus.Countdown;
         room.StartedAt = DateTime.UtcNow;
@@ -257,6 +289,11 @@ public class GameRoomService
         {
             throw new InvalidOperationException("Only the host can perform this action.");
         }
+    }
+
+    private static bool IsExpiredWaitingRoom(GameRoom room)
+    {
+        return room.Status == GameStatus.Waiting && room.LobbyExpiresAt <= DateTime.UtcNow;
     }
 
     private static string GenerateGameCode()

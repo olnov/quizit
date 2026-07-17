@@ -1,16 +1,23 @@
 <script lang="ts">
 	import { Dialog } from 'bits-ui';
+	import { goto } from '$app/navigation';
 	import Button from '$lib/components/ui/Button.svelte';
 	import TextField from '$lib/components/ui/TextField.svelte';
+	import { saveRoomSession } from '$lib/game-room';
 
 	let playerName = $state('');
 	let gameCode = $state('');
 	let message = $state('');
 
-	function joinRoom() {
-		message = playerName.trim() && gameCode.trim()
-			? 'Room connection will be available when the backend is connected.'
-			: 'Enter your name and the six-character room code.';
+	async function joinRoom() {
+		if (!playerName.trim() || !gameCode.trim()) {
+			message = 'Enter your name and the six-character room code.';
+			return;
+		}
+
+		const code = gameCode.trim().toUpperCase();
+		saveRoomSession(code, { playerId: '', playerToken: '', playerName: playerName.trim(), isHost: false });
+		await goto(`/lobby/${code}`);
 	}
 </script>
 

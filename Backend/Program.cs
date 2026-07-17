@@ -5,6 +5,7 @@ using Backend.Features.GameSessions;
 using Backend.Data;
 using Backend.Hubs;
 using Backend.Shared;
+using Backend.Data.Seeds;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -21,7 +22,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("Frontend", policy =>
     {
         policy
-            .WithOrigins("http://localhost:5173")
+            .WithOrigins("http://localhost:5173", "http://127.0.0.1:5173")
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
@@ -29,6 +30,7 @@ builder.Services.AddCors(options =>
 });
 builder.Services.AddScoped<QuizCatalog>();
 builder.Services.AddSingleton<GameRoomService>();
+builder.Services.AddHostedService<GameRoomCleanupService>();
 builder.Services.AddScoped<GameSessionService>();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
@@ -42,6 +44,10 @@ app.UseMiddleware<ApiExceptionMiddleware>();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
+    using var scope = app.Services.CreateScope();
+    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    await DevelopmentDataSeeder.SeedAsync(dbContext, CancellationToken.None);
+
     app.MapOpenApi();
     app.UseSwaggerUI(options =>
     {

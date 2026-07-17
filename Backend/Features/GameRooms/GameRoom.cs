@@ -13,6 +13,7 @@ public class GameRoom
     public int CurrentQuestionIndex { get; set; } = -1;
     public Dictionary<string, SubmittedAnswer> CurrentAnswers { get; set; } = new();
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime LobbyExpiresAt { get; set; } = DateTime.UtcNow.AddMinutes(10);
     public DateTime? StartedAt { get; set; }
     public DateTime? CompletedAt { get; set; }
 }
