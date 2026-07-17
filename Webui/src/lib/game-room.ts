@@ -1,6 +1,6 @@
 import { HubConnectionBuilder, LogLevel, type HubConnection } from '@microsoft/signalr';
 
-const apiBaseUrl = import.meta.env.PUBLIC_API_BASE_URL ?? 'http://localhost:5298';
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5298';
 
 export type RoomPlayer = { playerId: string; name: string; score: number; isConnected: boolean; hasAnswered: boolean };
 export type GameRoom = { gameCode: string; quizId: string; status: number; lobbyExpiresAt: string; questionCount: number; answerTimeLimitSeconds: number | null; questionSelectionMode: number; specificDifficulty: number | null; answerDeadlineAt: string | null; currentQuestionIndex: number; players: RoomPlayer[] };
