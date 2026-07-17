@@ -22,10 +22,18 @@ public static class PostgresConnectionString
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
 
+        var isPostgresUri = connectionString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase)
+            || connectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase);
+
+        if (!isPostgresUri)
+        {
+            return connectionString;
+        }
+
         if (!Uri.TryCreate(connectionString, UriKind.Absolute, out var uri)
             || (uri.Scheme != "postgres" && uri.Scheme != "postgresql"))
         {
-            return connectionString;
+            throw new ArgumentException("PostgreSQL URI is not valid.", nameof(connectionString));
         }
 
         if (string.IsNullOrWhiteSpace(uri.Host) || string.IsNullOrWhiteSpace(uri.AbsolutePath.Trim('/')))

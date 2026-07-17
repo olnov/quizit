@@ -18,8 +18,11 @@ Database__SeedDemoData=false
 ```
 
 The backend accepts both Npgsql `Host=...;Database=...` strings and Railway's
-`postgresql://...` format. It reads `ConnectionStrings__Postgres` first and
-falls back to `DATABASE_URL`. `PORT` and `RAILWAY_ENVIRONMENT` are supplied by Railway. The backend reads
+`postgresql://...` format. Add the variable through Railway's **Add reference**
+control, selecting `DATABASE_URL` from the PostgreSQL service; replace
+`Postgres` above with that service's exact name. The backend reads
+`ConnectionStrings__Postgres` first, then `DATABASE_PRIVATE_URL`, then
+`DATABASE_URL`. `PORT` and `RAILWAY_ENVIRONMENT` are supplied by Railway. The backend reads
 `PORT`, binds to all interfaces, trusts Railway's forwarded HTTPS headers, and
 exposes `GET /health` for a Railway health check.
 

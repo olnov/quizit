@@ -19,8 +19,12 @@ if (!string.IsNullOrWhiteSpace(port))
 
 // Add services to the container.
 var postgresConnectionString = PostgresConnectionString.Normalize(
-    builder.Configuration.GetConnectionString("Postgres")
-    ?? builder.Configuration["DATABASE_URL"]
+    new string?[]
+    {
+        builder.Configuration.GetConnectionString("Postgres"),
+        builder.Configuration["DATABASE_PRIVATE_URL"],
+        builder.Configuration["DATABASE_URL"],
+    }.FirstOrDefault(connectionString => !string.IsNullOrWhiteSpace(connectionString))
     ?? throw new InvalidOperationException("PostgreSQL connection string is not configured."));
 
 builder.Services.AddDbContext<AppDbContext>(options =>

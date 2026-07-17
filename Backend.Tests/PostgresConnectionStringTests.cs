@@ -31,4 +31,11 @@ public class PostgresConnectionStringTests
         Assert.Equal("Require", builder["SSL Mode"]?.ToString());
         Assert.Equal("Quizz", builder.ApplicationName);
     }
+
+    [Fact]
+    public void Normalize_RejectsMalformedPostgreSqlUri()
+    {
+        Assert.Throws<ArgumentException>(() =>
+            PostgresConnectionString.Normalize("postgresql://${{Postgres.DATABASE_URL}}"));
+    }
 }
