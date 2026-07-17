@@ -13,6 +13,8 @@
 	let quizId = $state('');
 	let questionCount = $state(1);
 	let answerTimeLimitSeconds = $state<number | null>(null);
+	let questionSelectionMode = $state(0);
+	let specificDifficulty = $state(100);
 	let message = $state('');
 	let creating = $state(false);
 
@@ -43,7 +45,7 @@
 		creating = true;
 		message = '';
 		try {
-			const response = await createRoom(quizId, hostName.trim(), questionCount, answerTimeLimitSeconds);
+			const response = await createRoom(quizId, hostName.trim(), questionCount, answerTimeLimitSeconds, questionSelectionMode, questionSelectionMode === 1 ? specificDifficulty : null);
 			saveRoomSession(response.room.gameCode, {
 				...response.credentials,
 				playerName: hostName.trim(),
@@ -59,7 +61,7 @@
 </script>
 
 <Dialog.Root>
-	<Dialog.Trigger class="game-button">Create a room <span aria-hidden="true">&rarr;</span></Dialog.Trigger>
+	<Dialog.Trigger class="game-button">Create a room</Dialog.Trigger>
 	<Dialog.Portal>
 		<Dialog.Overlay class="game-dialog-overlay" />
 		<Dialog.Content class="game-dialog" aria-describedby="create-room-description">
@@ -100,6 +102,17 @@
 						<option value="unlimited">Unlimited</option>
 					</select>
 				</label>
+				<label class="select-field">
+					<span>Question order</span>
+					<select bind:value={questionSelectionMode}>
+						<option value={0}>Ascending difficulty</option>
+						<option value={1}>Specific difficulty</option>
+						<option value={2}>Mixed</option>
+					</select>
+				</label>
+				{#if questionSelectionMode === 1}
+					<label class="select-field"><span>Difficulty (0-1000)</span><input type="number" min="0" max="1000" step="100" bind:value={specificDifficulty} /></label>
+				{/if}
 				<Button type="submit" class="submit-button" disabled={creating}>
 					{creating ? 'Creating...' : 'Create room'}
 				</Button>

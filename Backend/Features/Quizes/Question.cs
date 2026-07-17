@@ -7,7 +7,7 @@ public class Question
     public string Text { get; set; } = string.Empty;
     public string? CodeContext { get; set; }
     public string? Explanation { get; set; }
-    public QuestionDifficulty Difficulty { get; set; }
+    public int Difficulty { get; set; }
     public List<AnswerOption> Options { get; set; } = new();
     public Guid CorrectOptionId { get; set; }
 }

@@ -4,6 +4,7 @@
 	import Button from '$lib/components/ui/Button.svelte';
 	import {
 		connectToRoom,
+		getQuizDifficultyCounts,
 		getRoomSession,
 		saveRoomSession,
 		startRoom,
@@ -20,10 +21,15 @@
 	let starting = $state(false);
 	let questionCount = $state(1);
 	let answerTimeLimitSeconds = $state<number | null>(null);
+	let questionSelectionMode = $state(0);
+	let specificDifficulty = $state(100);
+	let difficultyCounts = $state<Record<number, number>>({});
+	let difficultyCountsLoaded = $state(false);
 
 	let remainingSeconds = $derived(room ? Math.max(0, Math.ceil((Date.parse(room.lobbyExpiresAt) - now) / 1000)) : 0);
 	let connectedGuests = $derived(room?.players.filter((player) => player.isConnected && player.playerId !== session?.playerId).length ?? 0);
-	let canStart = $derived(Boolean(session?.isHost && connectedGuests > 0 && remainingSeconds > 0));
+	let hasAvailableQuestions = $derived(questionSelectionMode !== 1 || (difficultyCountsLoaded && (difficultyCounts[specificDifficulty] ?? 0) >= questionCount));
+	let canStart = $derived(Boolean(session?.isHost && connectedGuests > 0 && remainingSeconds > 0 && hasAvailableQuestions));
 
 	onMount(() => {
 		const savedSession = getRoomSession(params.gameCode);
@@ -40,7 +46,14 @@
 			params.gameCode,
 			savedSession,
 			(updatedRoom) => {
-				if (isMounted) { room = updatedRoom; questionCount = updatedRoom.questionCount; answerTimeLimitSeconds = updatedRoom.answerTimeLimitSeconds; }
+				if (isMounted) {
+					room = updatedRoom;
+					questionCount = updatedRoom.questionCount;
+					answerTimeLimitSeconds = updatedRoom.answerTimeLimitSeconds;
+					questionSelectionMode = updatedRoom.questionSelectionMode;
+					specificDifficulty = updatedRoom.specificDifficulty ?? 100;
+					void loadDifficultyCounts(updatedRoom.quizId);
+				}
 			},
 			(credentials) => {
 				if (!isMounted) return;
@@ -67,13 +80,40 @@
 		starting = true;
 		message = '';
 		try {
-			await updateRoomSettings(params.gameCode, session.playerToken, questionCount, answerTimeLimitSeconds);
+			await updateRoomSettings(params.gameCode, session.playerToken, questionCount, answerTimeLimitSeconds, questionSelectionMode, questionSelectionMode === 1 ? specificDifficulty : null);
 			await startRoom(params.gameCode, session.playerToken);
 		} catch (error) {
 			message = error instanceof Error ? error.message : 'Unable to start the game.';
 		} finally {
 			starting = false;
 		}
+	}
+
+	async function loadDifficultyCounts(quizId: string) {
+		try {
+			const counts = await getQuizDifficultyCounts(quizId);
+			difficultyCounts = Object.fromEntries(counts.map((item) => [item.difficulty, item.count]));
+			difficultyCountsLoaded = true;
+			clampQuestionCount();
+		} catch (error) {
+			message = error instanceof Error ? error.message : 'Unable to load question availability.';
+		}
+	}
+
+	function clampQuestionCount() {
+		if (questionSelectionMode !== 1 || !difficultyCountsLoaded) return;
+		const available = difficultyCounts[specificDifficulty] ?? 0;
+		if (available > 0 && questionCount > available) questionCount = available;
+	}
+
+	function changeSelectionMode(event: Event) {
+		questionSelectionMode = Number((event.currentTarget as HTMLSelectElement).value);
+		clampQuestionCount();
+	}
+
+	function changeSpecificDifficulty(event: Event) {
+		specificDifficulty = Number((event.currentTarget as HTMLInputElement).value);
+		clampQuestionCount();
 	}
 
 	function formatRemaining(seconds: number) {
@@ -105,9 +145,12 @@
 				</div>
 				{#if session?.isHost}
 					<div class="round-settings">
-						<label>Questions <input type="number" min="1" max="100" bind:value={questionCount} /></label>
+						<label>Questions <input type="number" min="1" max={questionSelectionMode === 1 && difficultyCountsLoaded ? difficultyCounts[specificDifficulty] ?? 0 : 100} bind:value={questionCount} /></label>
 						<label>Answer time <select value={answerTimeLimitSeconds ?? 'unlimited'} onchange={(event) => { const value = event.currentTarget.value; answerTimeLimitSeconds = value === 'unlimited' ? null : Number(value); }}><option value="15">15 sec</option><option value="30">30 sec</option><option value="60">60 sec</option><option value="unlimited">Unlimited</option></select></label>
+						<label>Question order <select value={questionSelectionMode} onchange={changeSelectionMode}><option value={0}>Ascending</option><option value={1}>Specific</option><option value={2}>Mixed</option></select></label>
+						{#if questionSelectionMode === 1}<label>Difficulty <input type="number" min="0" max="1000" step="100" value={specificDifficulty} onchange={changeSpecificDifficulty} /></label>{/if}
 					</div>
+					{#if questionSelectionMode === 1 && difficultyCountsLoaded}<p class="availability">Available at {specificDifficulty}: {difficultyCounts[specificDifficulty] ?? 0} questions</p>{/if}
 					<p class="host-note">
 						{connectedGuests > 0
 							? `${connectedGuests} player${connectedGuests === 1 ? '' : 's'} connected. You can start the game.`
@@ -163,6 +206,7 @@
 	.round-settings { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
 	.round-settings label { color: var(--color-muted); display: grid; font-size: .75rem; font-weight: 800; gap: 6px; letter-spacing: .06em; text-transform: uppercase; }
 	.round-settings input, .round-settings select { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-sm); color: var(--color-ink); min-height: 40px; padding: 0 10px; }
+	.availability { color: var(--color-muted); font-size: .84rem; margin: 10px 0 -8px; }
 	:global(.start-button) { min-width: 192px; }
 	.lobby-message { color: var(--color-muted); font-size: .9rem; line-height: 1.5; margin-top: 18px; max-width: 450px; }
 	.players-panel { background: var(--color-ink); box-shadow: 12px 12px 0 var(--color-lime); color: #f7f7f2; min-height: 420px; padding: 28px; }

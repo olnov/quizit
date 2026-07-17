@@ -34,4 +34,10 @@ public class QuizesController : ControllerBase
             cancellationToken);
         return Created($"/api/v1/quizes/{quiz.Id}", QuizMapper.ToDto(quiz));
     }
+
+    [HttpGet("{quizId:guid}/difficulty-counts")]
+    public async Task<IActionResult> GetDifficultyCounts(Guid quizId, CancellationToken cancellationToken)
+    {
+        return Ok(await _quizCatalog.GetDifficultyCountsAsync(quizId, cancellationToken));
+    }
 }

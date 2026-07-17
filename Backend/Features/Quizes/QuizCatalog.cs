@@ -1,4 +1,5 @@
 using Backend.Data;
+using Backend.Features.Quizes.Dtos;
 using Microsoft.EntityFrameworkCore;
 
 namespace Backend.Features.Quizes;
@@ -44,7 +45,7 @@ public class QuizCatalog
         string text,
         string? codeContext,
         string? explanation,
-        QuestionDifficulty difficulty,
+        int difficulty,
         IReadOnlyList<string> optionTexts,
         int correctOptionIndex,
         CancellationToken cancellationToken)
@@ -59,6 +60,11 @@ public class QuizCatalog
         if (correctOptionIndex is < 0 or > 3)
         {
             throw new ArgumentOutOfRangeException(nameof(correctOptionIndex));
+        }
+
+        if (difficulty is < 0 or > 1_000 || difficulty % 100 != 0)
+        {
+            throw new ArgumentException("Question difficulty must be between 0 and 1000 in increments of 100.", nameof(difficulty));
         }
 
         if (optionTexts.Any(string.IsNullOrWhiteSpace))
@@ -96,6 +102,26 @@ public class QuizCatalog
     {
         return await _dbContext.Quizes
             .OrderBy(quiz => quiz.Title)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyCollection<DifficultyCountDto>> GetDifficultyCountsAsync(
+        Guid quizId,
+        CancellationToken cancellationToken)
+    {
+        var quiz = await _dbContext.Quizes
+            .SingleOrDefaultAsync(current => current.Id == quizId, cancellationToken)
+            ?? throw new KeyNotFoundException($"Quiz with id '{quizId}' was not found.");
+
+        return await _dbContext.Questions
+            .Where(question => question.ThemeId == quiz.ThemeId)
+            .GroupBy(question => question.Difficulty)
+            .OrderBy(group => group.Key)
+            .Select(group => new DifficultyCountDto
+            {
+                Difficulty = group.Key,
+                Count = group.Count(),
+            })
             .ToListAsync(cancellationToken);
     }
 

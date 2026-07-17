@@ -21,8 +21,30 @@ public class GameRulesTests
         await Assert.ThrowsAsync<ArgumentException>(() => catalog.CreateQuestionAsync(
             theme.Id,
             "How many planets are in the Solar System?",
-            QuestionDifficulty.Easy,
+            null,
+            null,
+            100,
             ["7", "8", "9"],
+            1,
+            CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task CreateQuestionAsync_RejectsDifficultyThatIsNotAMultipleOfOneHundred()
+    {
+        await using var dbContext = CreateDbContext();
+        var theme = new QuizTheme { Name = "Science" };
+        dbContext.QuizThemes.Add(theme);
+        await dbContext.SaveChangesAsync();
+        var catalog = new QuizCatalog(dbContext);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => catalog.CreateQuestionAsync(
+            theme.Id,
+            "How many planets are in the Solar System?",
+            null,
+            null,
+            101,
+            ["7", "8", "9", "10"],
             1,
             CancellationToken.None));
     }
@@ -32,7 +54,7 @@ public class GameRulesTests
     {
         await using var dbContext = CreateDbContext();
         var (quiz, questions) = await SeedQuizAsync(dbContext, questionsPerGame: 2, questionCount: 3);
-        var room = CreateRoom(quiz.Id);
+        var room = CreateRoom(quiz.Id, questionCount: 2);
         var service = new GameSessionService(dbContext);
 
         var session = await service.CreateFromRoomAsync(room, CancellationToken.None);
@@ -48,7 +70,7 @@ public class GameRulesTests
     {
         await using var dbContext = CreateDbContext();
         var (quiz, questions) = await SeedQuizAsync(dbContext, questionsPerGame: 1, questionCount: 1);
-        var room = CreateRoom(quiz.Id);
+        var room = CreateRoom(quiz.Id, questionCount: 1);
         var player = room.Players.Single();
         var service = new GameSessionService(dbContext);
         await service.CreateFromRoomAsync(room, CancellationToken.None);
@@ -71,9 +93,17 @@ public class GameRulesTests
     public void GameRoomService_EnforcesStatusTransitions()
     {
         var service = new GameRoomService();
-        var room = service.CreateGameRoom(Guid.NewGuid(), "Host");
+        var room = service.CreateGameRoom(
+            Guid.NewGuid(),
+            "Host",
+            1,
+            null,
+            QuestionSelectionMode.AscendingDifficulty,
+            null);
         room.QuestionIds = [Guid.NewGuid()];
         var hostToken = room.Players.Single().PlayerToken;
+        var guest = new PlayerState { Name = "Guest" };
+        room.Players.Add(guest);
 
         service.StartGame(room.GameCode, hostToken);
         Assert.Equal(GameStatus.Countdown, room.Status);
@@ -81,11 +111,11 @@ public class GameRulesTests
         service.BeginQuestion(room.GameCode, hostToken);
         Assert.Equal(GameStatus.QuestionActive, room.Status);
 
+        room.CurrentAnswers[room.HostPlayerId] = new SubmittedAnswer { PlayerId = room.HostPlayerId };
+        room.CurrentAnswers[guest.PlayerId] = new SubmittedAnswer { PlayerId = guest.PlayerId };
+
         service.RevealQuestion(room.GameCode, hostToken);
         Assert.Equal(GameStatus.QuestionReveal, room.Status);
-
-        service.ShowScoreboard(room.GameCode, hostToken);
-        Assert.Equal(GameStatus.Scoreboard, room.Status);
 
         service.NextQuestion(room.GameCode, hostToken);
         Assert.Equal(GameStatus.Completed, room.Status);
@@ -142,18 +172,19 @@ public class GameRulesTests
             Id = questionId,
             ThemeId = themeId,
             Text = $"Question {index}",
-            Difficulty = QuestionDifficulty.Medium,
+            Difficulty = 200,
             Options = options,
             CorrectOptionId = correctOption.Id,
         };
     }
 
-    private static GameRoom CreateRoom(Guid quizId)
+    private static GameRoom CreateRoom(Guid quizId, int questionCount)
     {
         var player = new PlayerState { Name = "Player" };
         return new GameRoom
         {
             QuizId = quizId,
+            QuestionCount = questionCount,
             HostPlayerId = player.PlayerId,
             Players = [player],
         };

@@ -42,7 +42,9 @@ public class GameRoomController : ControllerBase
             request.QuizId,
             request.HostName,
             request.QuestionCount,
-            request.AnswerTimeLimitSeconds);
+            request.AnswerTimeLimitSeconds,
+            request.QuestionSelectionMode,
+            request.SpecificDifficulty);
         var host = room.Players.Single(player => player.PlayerId == room.HostPlayerId);
 
         return Created($"/api/v1/game-rooms/{room.GameCode}", new CreateRoomResponseDto
@@ -216,7 +218,9 @@ public class GameRoomController : ControllerBase
             gameCode,
             request.PlayerToken,
             request.QuestionCount,
-            request.AnswerTimeLimitSeconds);
+            request.AnswerTimeLimitSeconds,
+            request.QuestionSelectionMode,
+            request.SpecificDifficulty);
         var response = GameRoomMapper.ToDto(room);
         await _gameHubContext.Clients.Group(gameCode)
             .SendAsync("LobbyUpdated", response, cancellationToken);

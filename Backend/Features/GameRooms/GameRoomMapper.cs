@@ -14,6 +14,8 @@ public static class GameRoomMapper
             LobbyExpiresAt = room.LobbyExpiresAt,
             QuestionCount = room.QuestionCount,
             AnswerTimeLimitSeconds = room.AnswerTimeLimitSeconds,
+            QuestionSelectionMode = room.QuestionSelectionMode,
+            SpecificDifficulty = room.SpecificDifficulty,
             AnswerDeadlineAt = room.AnswerDeadlineAt,
             CurrentQuestionIndex = room.CurrentQuestionIndex,
             Players = room.Players.Select(player => new RoomPlayerDto

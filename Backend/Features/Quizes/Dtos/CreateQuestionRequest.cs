@@ -1,5 +1,5 @@
 using System.ComponentModel.DataAnnotations;
-using Backend.Features.Quizes;
+using Backend.Shared;
 
 namespace Backend.Features.Quizes.Dtos;
 
@@ -15,7 +15,9 @@ public class CreateQuestionRequest
     [MaxLength(2_000)]
     public string? Explanation { get; set; }
 
-    public QuestionDifficulty Difficulty { get; set; }
+    [Range(0, 1_000)]
+    [MultipleOf(100)]
+    public int Difficulty { get; set; }
 
     [Required]
     public List<string> Options { get; set; } = new();
