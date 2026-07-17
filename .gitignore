@@ -4,3 +4,7 @@ backend-gaps.md
 
 # Environment variables
 .env
+
+# Build artifacts
+**/bin/
+**/obj/
