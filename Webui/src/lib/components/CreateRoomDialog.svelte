@@ -1,16 +1,57 @@
 <script lang="ts">
 	import { Dialog } from 'bits-ui';
+	import { goto } from '$app/navigation';
+	import { onMount } from 'svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import TextField from '$lib/components/ui/TextField.svelte';
+	import { createRoom, getQuizzes, saveRoomSession } from '$lib/game-room';
+
+	type Quiz = { id: string; title: string };
 
 	let hostName = $state('');
-	let theme = $state('General knowledge');
+	let quizzes = $state<Quiz[]>([]);
+	let quizId = $state('');
 	let message = $state('');
+	let creating = $state(false);
 
-	function createRoom() {
-		message = hostName.trim()
-			? `Room setup for ${hostName.trim()} will be connected to the Quizz API next.`
-			: 'Enter your name before creating the room.';
+	onMount(async () => {
+		try {
+			quizzes = await getQuizzes();
+			quizId = quizzes[0]?.id ?? '';
+			if (quizzes.length === 0) {
+				message = 'There are no quizzes yet. Create a quiz before opening a room.';
+			}
+		} catch (error) {
+			message = error instanceof Error ? error.message : 'The Quizz API is unavailable. Start the backend, then try again.';
+		}
+	});
+
+	async function create() {
+		if (!hostName.trim()) {
+			message = 'Enter your name to create a room.';
+			return;
+		}
+
+		if (!quizId) {
+			message = 'There are no quizzes yet. Create a quiz before opening a room.';
+			return;
+		}
+
+		creating = true;
+		message = '';
+		try {
+			const response = await createRoom(quizId, hostName.trim());
+			saveRoomSession(response.room.gameCode, {
+				...response.credentials,
+				playerName: hostName.trim(),
+				isHost: true
+			});
+			await goto(`/lobby/${response.room.gameCode}`);
+		} catch (error) {
+			message = error instanceof Error ? error.message : 'Unable to create the room.';
+		} finally {
+			creating = false;
+		}
 	}
 </script>
 
@@ -27,20 +68,25 @@
 				<Dialog.Close class="game-dialog-close" aria-label="Close dialog">&times;</Dialog.Close>
 			</div>
 			<Dialog.Description id="create-room-description">
-				Choose a topic now. The room code is created once the backend request is connected.
+				Choose a quiz. Your lobby stays open for ten minutes, then closes automatically.
 			</Dialog.Description>
-			<form onsubmit={(event) => { event.preventDefault(); createRoom(); }}>
+			<form onsubmit={(event) => { event.preventDefault(); create(); }}>
 				<TextField label="Your name" placeholder="e.g. Alex" bind:value={hostName} />
 				<label class="select-field">
-					<span>Quiz theme</span>
-					<select bind:value={theme}>
-						<option>General knowledge</option>
-						<option>Science &amp; discovery</option>
-						<option>History</option>
-						<option>Film &amp; music</option>
+					<span>Quiz</span>
+					<select bind:value={quizId} disabled={quizzes.length === 0}>
+						{#if quizzes.length === 0}
+							<option>No quizzes available</option>
+						{:else}
+							{#each quizzes as quiz}
+								<option value={quiz.id}>{quiz.title}</option>
+							{/each}
+						{/if}
 					</select>
 				</label>
-				<Button type="submit" class="submit-button">Create room</Button>
+				<Button type="submit" class="submit-button" disabled={creating}>
+					{creating ? 'Creating...' : 'Create room'}
+				</Button>
 				{#if message}<p class="message" aria-live="polite">{message}</p>{/if}
 			</form>
 		</Dialog.Content>

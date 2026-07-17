@@ -62,10 +62,7 @@ public class GameRoomController : ControllerBase
             return Forbid();
         }
 
-        if (room.Status != GameStatus.Waiting)
-        {
-            throw new InvalidOperationException("The game room has already started.");
-        }
+        _gameRoomService.EnsureCanStartGame(gameCode, request.PlayerToken);
 
         await _gameSessionService.CreateFromRoomAsync(room, cancellationToken);
         var startedRoom = _gameRoomService.StartGame(gameCode, request.PlayerToken);

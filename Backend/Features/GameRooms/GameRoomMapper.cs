@@ -11,6 +11,7 @@ public static class GameRoomMapper
             GameCode = room.GameCode,
             QuizId = room.QuizId,
             Status = room.Status,
+            LobbyExpiresAt = room.LobbyExpiresAt,
             CurrentQuestionIndex = room.CurrentQuestionIndex,
             Players = room.Players.Select(player => new RoomPlayerDto
             {

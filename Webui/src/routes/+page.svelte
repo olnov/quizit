@@ -18,8 +18,7 @@
 
 	<section class="hero" aria-labelledby="page-title">
 		<div class="hero-copy">
-			<p class="eyebrow">Live quiz platform</p>
-			<h1 id="page-title">A better way to play trivia together.</h1>
+			<h1 id="page-title">A better way to study IT foundations together.</h1>
 			<p class="intro">
 				Start a room, share the code, and let every answer count. Built for quick games with friends,
 				teams, and classrooms.
@@ -36,13 +35,16 @@
 				<span>00:18</span>
 			</div>
 			<div class="progress-track" aria-hidden="true"><span></span></div>
-			<p class="preview-label">Science &amp; discovery</p>
-			<h2>Which planet has the shortest day in our solar system?</h2>
+			<p class="preview-label">JavaScript</p>
+			<h2>What would this code return?</h2>
+			<h3>
+				<code>{'(() => {})();'}</code>
+			</h3>
 			<div class="answer-grid">
-				<span><b>A</b> Mercury</span>
-				<span><b>B</b> Mars</span>
-				<span class="selected"><b>C</b> Jupiter</span>
-				<span><b>D</b> Venus</span>
+				<span><b>A</b> Error</span>
+				<span><b>B</b> Null</span>
+				<span class="selected"><b>C</b> Undefined</span>
+				<span><b>D</b> Empty String</span>
 			</div>
 		</div>
 	</section>

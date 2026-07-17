@@ -38,6 +38,7 @@
 		"vitest-browser-svelte": "^2.1.1"
 	},
 	"dependencies": {
+		"@microsoft/signalr": "^10.0.0",
 		"bits-ui": "^2.18.1"
 	}
 }
