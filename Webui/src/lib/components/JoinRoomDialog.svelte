@@ -4,8 +4,9 @@
 	import Button from '$lib/components/ui/Button.svelte';
 	import TextField from '$lib/components/ui/TextField.svelte';
 	import { saveRoomSession } from '$lib/game-room';
-
-	let playerName = $state('');
+	import { generateNickName } from '$lib/name-generator';
+	
+	let playerName = $state(generateNickName());
 	let gameCode = $state('');
 	let message = $state('');
 
@@ -37,7 +38,7 @@
 				Ask the host for the six-character code, then choose the name shown to other players.
 			</Dialog.Description>
 			<form onsubmit={(event) => { event.preventDefault(); joinRoom(); }}>
-				<TextField label="Your name" placeholder="e.g. Alex" bind:value={playerName} />
+				<TextField label="Your nickname" placeholder="e.g. BlueFish99" bind:value={playerName} />
 				<TextField label="Room code" placeholder="ABC123" maxlength={6} className="code-field" bind:value={gameCode} />
 				<Button type="submit" class="submit-button">Join room</Button>
 				{#if message}<p class="message" aria-live="polite">{message}</p>{/if}
