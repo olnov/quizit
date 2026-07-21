@@ -5,10 +5,11 @@
 	import Button from '$lib/components/ui/Button.svelte';
 	import TextField from '$lib/components/ui/TextField.svelte';
 	import { createRoom, getQuizzes, saveRoomSession } from '$lib/game-room';
+	import { generateNickName } from '$lib/name-generator';
 
 	type Quiz = { id: string; title: string; questionsPerGame: number };
 
-	let hostName = $state('');
+	let hostName = $state(generateNickName());
 	let quizzes = $state<Quiz[]>([]);
 	let quizId = $state('');
 	let questionCount = $state(1);
@@ -76,7 +77,7 @@
 				Choose a quiz. Your lobby stays open for ten minutes, then closes automatically.
 			</Dialog.Description>
 			<form onsubmit={(event) => { event.preventDefault(); create(); }}>
-				<TextField label="Your name" placeholder="e.g. Alex" bind:value={hostName} />
+				<TextField label="Your nickname" placeholder="e.g. BlueFish99" bind:value={hostName} />
 				<label class="select-field">
 					<span>Quiz</span>
 					<select bind:value={quizId} disabled={quizzes.length === 0}>
