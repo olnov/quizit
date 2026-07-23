@@ -74,6 +74,11 @@ builder.Services.AddAuthorization(options =>
         policy.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme);
         policy.RequireAuthenticatedUser();
     });
+    options.AddPolicy("Authoring", policy =>
+    {
+        policy.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme);
+        policy.RequireRole(Roles.Admin, Roles.QuizAuthor);
+    });
 });
 builder.Services.Configure<OidcOptions>(builder.Configuration.GetSection(OidcOptions.SectionName));
 builder.Services.AddOpenIddict()
