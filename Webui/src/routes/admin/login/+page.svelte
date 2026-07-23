@@ -1,5 +1,18 @@
 <script lang="ts">
 	import Button from '$lib/components/ui/Button.svelte';
+	import { signIn } from '$lib/auth/oidc';
+
+	let error = $state('');
+
+	async function startSignIn() {
+		error = '';
+
+		try {
+			await signIn();
+		} catch {
+			error = 'We could not start sign-in. Check the authentication configuration.';
+		}
+	}
 </script>
 
 <svelte:head>
@@ -11,17 +24,12 @@
         <h1 id="login-title">Admin login</h1>
         <p class="intro">Sign in to create and manage quizzes.</p>
 
-        <form class="login-form">
-            <label>
-                <span>Username</span>
-                <input type="text" name="username" autocomplete="username" />
-            </label>
-            <label>
-                <span>Password</span>
-                <input type="password" name="password" autocomplete="current-password" />
-            </label>
-            <Button type="submit" class="login-button">Login</Button>
-        </form>
+        <div class="login-form">
+            <Button type="button" class="login-button" onclick={startSignIn}>Continue to sign in</Button>
+            {#if error}
+                <p class="error" role="alert">{error}</p>
+            {/if}
+        </div>
     </section>
 </main>
 
@@ -62,33 +70,12 @@
         margin-top: 28px;
     }
 
-    .login-form label {
-        display: grid;
-        font-size: 0.875rem;
-        font-weight: 700;
-        gap: 7px;
-    }
-
-    input {
-        background: var(--color-surface);
-        border: 1px solid var(--color-border);
-        border-radius: var(--radius-sm);
-        color: var(--color-ink);
-        font: inherit;
-        min-height: 46px;
-        padding: 0 13px;
-    }
-
-    input:focus-visible {
-        border-color: var(--color-accent);
-        outline: 3px solid color-mix(in srgb, var(--color-accent) 30%, transparent);
-        outline-offset: 1px;
-    }
-
     :global(.login-button) {
         margin-top: 4px;
         width: 100%;
     }
+
+    .error { color: #a32b1f; font-size: .875rem; margin: 0; }
 
     @media (max-width: 430px) {
         .login-panel {

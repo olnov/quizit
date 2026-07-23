@@ -1,5 +1,11 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using OpenIddict.Abstractions;
+using OpenIddict.Server.AspNetCore;
+using Backend.Features.Auth;
 using Backend.Features.Quizes;
 using Backend.Features.GameRooms;
 using Backend.Features.GameSessions;
@@ -10,6 +16,9 @@ using Backend.Data.Seeds;
 
 
 var builder = WebApplication.CreateBuilder(args);
+var oidcOptions = builder.Configuration.GetSection(OidcOptions.SectionName).Get<OidcOptions>()
+    ?? new OidcOptions();
+var oidcCredentials = OidcCredentials.Create(oidcOptions, builder.Environment.IsProduction());
 
 var port = Environment.GetEnvironmentVariable("PORT");
 if (!string.IsNullOrWhiteSpace(port))
@@ -30,7 +39,73 @@ var postgresConnectionString = PostgresConnectionString.Normalize(
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(postgresConnectionString));
 builder.Services.AddControllers();
+builder.Services.AddRazorPages();
 builder.Services.AddSignalR();
+builder.Services
+    .AddDefaultIdentity<QuizUser>(options =>
+    {
+        options.SignIn.RequireConfirmedAccount = false;
+        options.User.RequireUniqueEmail = true;
+        options.Stores.MaxLengthForKeys = 0;
+    })
+    .AddRoles<IdentityRole>()
+    .AddEntityFrameworkStores<AppDbContext>()
+    .AddDefaultTokenProviders();
+builder.Services.AddAuthentication()
+    .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = oidcOptions.Issuer,
+            ValidateAudience = true,
+            ValidAudience = "quizit-api",
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new X509SecurityKey(oidcCredentials.SigningCertificate),
+            NameClaimType = OpenIddictConstants.Claims.Name,
+            RoleClaimType = OpenIddictConstants.Claims.Role,
+        };
+    });
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("Api", policy =>
+    {
+        policy.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme);
+        policy.RequireAuthenticatedUser();
+    });
+});
+builder.Services.Configure<OidcOptions>(builder.Configuration.GetSection(OidcOptions.SectionName));
+builder.Services.AddOpenIddict()
+    .AddCore(options => options.UseEntityFrameworkCore().UseDbContext<AppDbContext>())
+    .AddServer(options =>
+    {
+        options.SetIssuer(new Uri(oidcOptions.Issuer));
+        options.SetAuthorizationEndpointUris("/connect/authorize")
+            .SetTokenEndpointUris("/connect/token")
+            .SetEndSessionEndpointUris("/connect/logout")
+            .AllowAuthorizationCodeFlow()
+            .AllowRefreshTokenFlow()
+            .RequireProofKeyForCodeExchange()
+            .RegisterScopes(
+                OpenIddictConstants.Scopes.Email,
+                OpenIddictConstants.Scopes.Profile,
+                OpenIddictConstants.Scopes.Roles,
+                "quizit_api")
+            .AddSigningCertificate(oidcCredentials.SigningCertificate)
+            .AddEncryptionKey(oidcCredentials.EncryptionKey)
+            .DisableAccessTokenEncryption();
+
+        var aspNetCore = options.UseAspNetCore()
+            .EnableAuthorizationEndpointPassthrough()
+            .EnableTokenEndpointPassthrough()
+            .EnableEndSessionEndpointPassthrough();
+
+        if (builder.Environment.IsDevelopment())
+        {
+            aspNetCore.DisableTransportSecurityRequirement();
+        }
+    });
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
     ?? ["http://localhost:5173", "http://127.0.0.1:5173"];
 builder.Services.AddCors(options =>
@@ -49,6 +124,11 @@ builder.Services.AddSingleton<GameRoomService>();
 builder.Services.AddHostedService<GameRoomCleanupService>();
 builder.Services.AddHostedService<GameQuestionTimeoutService>();
 builder.Services.AddScoped<GameSessionService>();
+builder.Services.AddScoped<UserManagementService>();
+builder.Services.Configure<InitialAdminOptions>(
+    builder.Configuration.GetSection(InitialAdminOptions.SectionName));
+builder.Services.AddScoped<InitialAdminProvisioner>();
+builder.Services.AddScoped<OidcClientProvisioner>();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
@@ -72,6 +152,24 @@ using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await dbContext.Database.MigrateAsync();
+
+    // Add roles
+    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+    if (!await roleManager.RoleExistsAsync(Roles.Admin))
+    {
+        await roleManager.CreateAsync(new IdentityRole(Roles.Admin));
+    }
+    if (!await roleManager.RoleExistsAsync(Roles.QuizAuthor))
+    {
+        await roleManager.CreateAsync(new IdentityRole(Roles.QuizAuthor));
+    }
+
+    var initialAdminProvisioner = scope.ServiceProvider
+        .GetRequiredService<InitialAdminProvisioner>();
+    await initialAdminProvisioner.ProvisionAsync();
+
+    var oidcClientProvisioner = scope.ServiceProvider.GetRequiredService<OidcClientProvisioner>();
+    await oidcClientProvisioner.ProvisionAsync();
 
     if (app.Environment.IsDevelopment() || builder.Configuration.GetValue<bool>("Database:SeedDemoData"))
     {
@@ -98,9 +196,26 @@ if (!app.Environment.IsProduction() || isRailway)
 
 app.UseCors("Frontend");
 
+// The default Identity UI contains a registration page, but accounts are admin-provisioned.
+app.Use(async (context, next) =>
+{
+    if (string.Equals(
+            context.Request.Path.Value,
+            "/Identity/Account/Register",
+            StringComparison.OrdinalIgnoreCase))
+    {
+        context.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+    }
+
+    await next();
+});
+
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapRazorPages();
 app.MapHub<GameHub>("/api/v1/hubs/game");
 app.MapGet("/health", () => Results.Ok()).AllowAnonymous();
 
