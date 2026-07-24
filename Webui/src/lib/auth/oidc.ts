@@ -1,91 +1,112 @@
 import { browser } from '$app/environment';
-import { UserManager, WebStorageStateStore, type User } from 'oidc-client-ts';
 
-let manager: UserManager | undefined;
+type TokenSet = {
+    accessToken: string;
+    refreshToken: string | null;
+    expiresAt: number;
+};
 
-function getAuthority(): string {
-    return (import.meta.env.VITE_OIDC_AUTHORITY ?? import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5298')
-        .replace(/\/$/, '');
-}
+const storageKey = 'quizit:admin-tokens';
 
 function getClientId(): string {
     return import.meta.env.VITE_OIDC_CLIENT_ID ?? 'quizit-webui';
 }
 
-function getManager(): UserManager {
-    if (!browser) {
-        throw new Error('OIDC authentication is only available in the browser.');
-    }
-
-    if (manager) {
-        return manager;
-    }
-
-    manager = new UserManager({
-        authority: getAuthority(),
+export async function signIn(username: string, password: string): Promise<void> {
+    const response = await requestTokens({
+        grant_type: 'password',
         client_id: getClientId(),
-        redirect_uri: `${window.location.origin}/admin/auth/callback`,
-        post_logout_redirect_uri: `${window.location.origin}/admin/login`,
-        response_type: 'code',
-        scope: 'openid profile email roles offline_access quizit_api',
-        userStore: new WebStorageStateStore({ store: window.sessionStorage }),
+        username,
+        password,
+        scope: 'openid profile email roles offline_access quizit_api'
     });
 
-    return manager;
+    storeTokens(response);
 }
 
-export async function signIn(): Promise<void> {
-    await getManager().signinRedirect();
-}
-
-export async function completeSignIn(): Promise<User> {
-    return getManager().signinRedirectCallback();
-}
-
-export async function signOut(): Promise<void> {
-    await getManager().signoutRedirect();
+export function signOut(): void {
+    if (browser) {
+        sessionStorage.removeItem(storageKey);
+    }
 }
 
 export async function getAccessToken(): Promise<string | null> {
-    const user = await getManager().getUser();
-    if (!user) {
+    const tokens = getStoredTokens();
+    if (!tokens) {
         return null;
     }
 
-    if (!user.expired) {
-        return user.access_token;
+    if (tokens.expiresAt > Date.now() + 15_000) {
+        return tokens.accessToken;
     }
 
-    if (!user.refresh_token) {
-        await getManager().removeUser();
+    if (!tokens.refreshToken) {
+        signOut();
         return null;
     }
 
-    const response = await fetch(`${getAuthority()}/connect/token`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
+    try {
+        const response = await requestTokens({
             grant_type: 'refresh_token',
             client_id: getClientId(),
-            refresh_token: user.refresh_token,
-        }),
+            refresh_token: tokens.refreshToken
+        });
+        storeTokens(response, tokens.refreshToken);
+        return response.access_token;
+    } catch {
+        signOut();
+        return null;
+    }
+}
+
+async function requestTokens(parameters: Record<string, string>): Promise<{
+    access_token: string;
+    refresh_token?: string;
+    expires_in: number;
+}> {
+    const response = await fetch('/api/v1/connect/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams(parameters)
     });
 
     if (!response.ok) {
-        await getManager().removeUser();
+        throw new Error('Invalid username or password.');
+    }
+
+    return response.json();
+}
+
+function getStoredTokens(): TokenSet | null {
+    if (!browser) {
         return null;
     }
 
-    const tokens: {
-        access_token: string;
-        expires_in: number;
-        refresh_token?: string;
-    } = await response.json();
+    const value = sessionStorage.getItem(storageKey);
+    if (!value) {
+        return null;
+    }
 
-    user.access_token = tokens.access_token;
-    user.refresh_token = tokens.refresh_token ?? user.refresh_token;
-    user.expires_at = Math.floor(Date.now() / 1000) + tokens.expires_in;
-    await getManager().storeUser(user);
+    try {
+        return JSON.parse(value) as TokenSet;
+    } catch {
+        signOut();
+        return null;
+    }
+}
 
-    return user.access_token;
+function storeTokens(
+    response: { access_token: string; refresh_token?: string; expires_in: number },
+    previousRefreshToken: string | null = null
+): void {
+    if (!browser) {
+        return;
+    }
+
+    const tokens: TokenSet = {
+        accessToken: response.access_token,
+        refreshToken: response.refresh_token ?? previousRefreshToken,
+        expiresAt: Date.now() + response.expires_in * 1000
+    };
+    sessionStorage.setItem(storageKey, JSON.stringify(tokens));
 }

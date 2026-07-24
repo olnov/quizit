@@ -19,6 +19,7 @@ using Backend.Data.Seeds;
 var builder = WebApplication.CreateBuilder(args);
 var oidcOptions = builder.Configuration.GetSection(OidcOptions.SectionName).Get<OidcOptions>()
     ?? new OidcOptions();
+var oidcIssuer = new Uri(oidcOptions.Issuer, UriKind.Absolute).AbsoluteUri;
 var oidcCredentials = OidcCredentials.Create(oidcOptions, builder.Environment.IsProduction());
 
 var port = Environment.GetEnvironmentVariable("PORT");
@@ -40,10 +41,9 @@ var postgresConnectionString = PostgresConnectionString.Normalize(
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(postgresConnectionString));
 builder.Services.AddControllers();
-builder.Services.AddRazorPages();
 builder.Services.AddSignalR();
 builder.Services
-    .AddDefaultIdentity<QuizUser>(options =>
+    .AddIdentityCore<QuizUser>(options =>
     {
         options.SignIn.RequireConfirmedAccount = false;
         options.User.RequireUniqueEmail = true;
@@ -55,10 +55,11 @@ builder.Services
 builder.Services.AddAuthentication()
     .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
     {
+        options.MapInboundClaims = false;
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
-            ValidIssuer = oidcOptions.Issuer,
+            ValidIssuer = oidcIssuer,
             ValidateAudience = true,
             ValidAudience = "quizit-api",
             ValidateLifetime = true,
@@ -86,13 +87,10 @@ builder.Services.AddOpenIddict()
     .AddCore(options => options.UseEntityFrameworkCore().UseDbContext<AppDbContext>())
     .AddServer(options =>
     {
-        options.SetIssuer(new Uri(oidcOptions.Issuer));
-        options.SetAuthorizationEndpointUris("/connect/authorize")
-            .SetTokenEndpointUris("/connect/token")
-            .SetEndSessionEndpointUris("/connect/logout")
-            .AllowAuthorizationCodeFlow()
+        options.SetIssuer(new Uri(oidcIssuer));
+        options.SetTokenEndpointUris("/api/v1/connect/token")
+            .AllowPasswordFlow()
             .AllowRefreshTokenFlow()
-            .RequireProofKeyForCodeExchange()
             .RegisterScopes(
                 OpenIddictConstants.Scopes.Email,
                 OpenIddictConstants.Scopes.Profile,
@@ -103,11 +101,9 @@ builder.Services.AddOpenIddict()
             .DisableAccessTokenEncryption();
 
         var aspNetCore = options.UseAspNetCore()
-            .EnableAuthorizationEndpointPassthrough()
-            .EnableTokenEndpointPassthrough()
-            .EnableEndSessionEndpointPassthrough();
+            .EnableTokenEndpointPassthrough();
 
-        if (builder.Environment.IsDevelopment())
+        if (builder.Environment.IsDevelopment() || !oidcOptions.RequireHttps)
         {
             aspNetCore.DisableTransportSecurityRequirement();
         }
@@ -203,26 +199,10 @@ if (!app.Environment.IsProduction() || isRailway)
 
 app.UseCors("Frontend");
 
-// The default Identity UI contains a registration page, but accounts are admin-provisioned.
-app.Use(async (context, next) =>
-{
-    if (string.Equals(
-            context.Request.Path.Value,
-            "/Identity/Account/Register",
-            StringComparison.OrdinalIgnoreCase))
-    {
-        context.Response.StatusCode = StatusCodes.Status404NotFound;
-        return;
-    }
-
-    await next();
-});
-
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-app.MapRazorPages();
 app.MapHub<GameHub>("/api/v1/hubs/game");
 app.MapGet("/health", () => Results.Ok()).AllowAnonymous();
 

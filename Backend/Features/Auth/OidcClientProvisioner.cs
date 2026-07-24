@@ -17,33 +17,32 @@ public class OidcClientProvisioner
 
     public async Task ProvisionAsync()
     {
-        if (await _applicationManager.FindByClientIdAsync(_options.WebuiClientId) is not null)
-        {
-            return;
-        }
-
-        await _applicationManager.CreateAsync(new OpenIddictApplicationDescriptor
+        var descriptor = new OpenIddictApplicationDescriptor
         {
             ClientId = _options.WebuiClientId,
             ClientType = OpenIddictConstants.ClientTypes.Public,
             ConsentType = OpenIddictConstants.ConsentTypes.Implicit,
             DisplayName = "QuizIt Web UI",
-            RedirectUris = { new Uri(_options.WebuiRedirectUri) },
-            PostLogoutRedirectUris = { new Uri(_options.WebuiPostLogoutRedirectUri) },
             Permissions =
             {
-                OpenIddictConstants.Permissions.Endpoints.Authorization,
-                OpenIddictConstants.Permissions.Endpoints.EndSession,
                 OpenIddictConstants.Permissions.Endpoints.Token,
-                OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode,
+                OpenIddictConstants.Permissions.GrantTypes.Password,
                 OpenIddictConstants.Permissions.GrantTypes.RefreshToken,
-                OpenIddictConstants.Permissions.ResponseTypes.Code,
                 OpenIddictConstants.Permissions.Scopes.Email,
                 OpenIddictConstants.Permissions.Scopes.Profile,
                 OpenIddictConstants.Permissions.Scopes.Roles,
                 OpenIddictConstants.Permissions.Prefixes.Scope + OpenIddictConstants.Scopes.OfflineAccess,
                 OpenIddictConstants.Permissions.Prefixes.Scope + "quizit_api",
             },
-        });
+        };
+
+        var application = await _applicationManager.FindByClientIdAsync(_options.WebuiClientId);
+        if (application is null)
+        {
+            await _applicationManager.CreateAsync(descriptor);
+            return;
+        }
+
+        await _applicationManager.UpdateAsync(application, descriptor);
     }
 }

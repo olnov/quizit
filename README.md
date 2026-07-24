@@ -89,8 +89,18 @@ npm run dev
 - [Railway deployment](railway-deployment.md) covers PostgreSQL, backend
   variables, CORS, health checks, and runtime constraints.
 - Netlify deploys `Webui` with `Webui` as its Base directory. Set
-  `VITE_API_BASE_URL` to the public backend URL. The Netlify adapter and
-  publish directory are configured in `Webui/netlify.toml`.
+  `BACKEND_API_URL` and `BACKEND_PUBLIC_URL` to the public Railway backend
+  URL in **Environment variables**. Keep their scope as **All scopes** or at
+  least include **Functions**, because SvelteKit reads them in Netlify
+  Functions at runtime. The adapter and publish directory are configured in
+  `Webui/netlify.toml`.
+
+The frontend proxies HTTP requests such as `/api/v1/quizes` and
+`/api/v1/connect/token` through SvelteKit to `BACKEND_API_URL`. The browser
+uses `BACKEND_PUBLIC_URL` only for the direct SignalR WebSocket connection at
+`/api/v1/hubs/game`. On Netlify and Railway these values normally match. A
+variable change requires a new Netlify deploy, but does not require changing a
+build-time API variable or frontend source code.
 
 For production, set `Database__SeedDemoData=false`, use a strong database
 password, and run the backend as one replica while rooms remain in memory.

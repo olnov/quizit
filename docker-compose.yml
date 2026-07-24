@@ -34,9 +34,8 @@ services:
       InitialAdmin__Email: ${INITIAL_ADMIN_EMAIL:-}
       InitialAdmin__Password: ${INITIAL_ADMIN_PASSWORD:-}
       Oidc__Issuer: ${OIDC_ISSUER:-http://localhost:8080}
-      Oidc__WebuiRedirectUri: ${FRONTEND_ORIGIN:-http://localhost:3000}/admin/auth/callback
-      Oidc__WebuiPostLogoutRedirectUri: ${FRONTEND_ORIGIN:-http://localhost:3000}/admin/login
       Oidc__AllowEphemeralCredentials: ${OIDC_ALLOW_EPHEMERAL_CREDENTIALS:-true}
+      Oidc__RequireHttps: ${OIDC_REQUIRE_HTTPS:-false}
       Oidc__SigningCertificateBase64: ${OIDC_SIGNING_CERTIFICATE_BASE64:-}
       Oidc__SigningCertificatePassword: ${OIDC_SIGNING_CERTIFICATE_PASSWORD:-}
       Oidc__EncryptionKeyBase64: ${OIDC_ENCRYPTION_KEY_BASE64:-}
@@ -52,11 +51,12 @@ services:
     build:
       context: ./Webui
       dockerfile: Dockerfile
-      args:
-        VITE_API_BASE_URL: ${PUBLIC_API_BASE_URL:-http://localhost:8080}
     environment:
       HOST: 0.0.0.0
       PORT: 3000
+      ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:3000}
+      BACKEND_API_URL: http://backend:8080
+      BACKEND_PUBLIC_URL: ${PUBLIC_API_BASE_URL:-http://localhost:8080}
     ports:
       - "${FRONTEND_PORT:-3000}:3000"
     depends_on:

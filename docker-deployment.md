@@ -25,6 +25,17 @@ FRONTEND_ORIGIN=https://quiz.example.com
 SEED_DEMO_DATA=false
 ```
 
+`PUBLIC_API_BASE_URL` is the address exposed to browsers. Inside Docker, the
+SvelteKit server uses the internal `http://backend:8080` address for its HTTP
+proxy and uses `PUBLIC_API_BASE_URL` only when it returns the SignalR endpoint
+to a browser. `FRONTEND_ORIGIN` also configures SvelteKit's `ORIGIN` runtime
+variable for CSRF protection, so it must exactly match the browser URL,
+including its scheme and port.
+
+`OIDC_REQUIRE_HTTPS=false` is appropriate only for this local HTTP setup. Keep
+it `true` in production, where the frontend and backend must be served through
+HTTPS.
+
 Put the frontend and backend behind a TLS-terminating reverse proxy. Do not
 publish the PostgreSQL port outside the host unless it is explicitly needed.
 
