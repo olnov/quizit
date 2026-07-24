@@ -4,8 +4,10 @@
 	import { onMount } from 'svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import TextField from '$lib/components/ui/TextField.svelte';
-	import { createRoom, getQuizzes, saveRoomSession } from '$lib/game-room';
+	import { createRoom, createSoloRoom, getQuizzes, saveRoomSession } from '$lib/game-room';
 	import { generateNickName } from '$lib/name-generator';
+
+	let { solo = false }: { solo?: boolean } = $props();
 
 	type Quiz = { id: string; title: string; questionsPerGame: number };
 
@@ -46,13 +48,14 @@
 		creating = true;
 		message = '';
 		try {
-			const response = await createRoom(quizId, hostName.trim(), questionCount, answerTimeLimitSeconds, questionSelectionMode, questionSelectionMode === 1 ? specificDifficulty : null);
+			const createGame = solo ? createSoloRoom : createRoom;
+			const response = await createGame(quizId, hostName.trim(), questionCount, answerTimeLimitSeconds, questionSelectionMode, questionSelectionMode === 1 ? specificDifficulty : null);
 			saveRoomSession(response.room.gameCode, {
 				...response.credentials,
 				playerName: hostName.trim(),
 				isHost: true
 			});
-			await goto(`/lobby/${response.room.gameCode}`);
+			await goto(solo ? `/game/${response.room.gameCode}` : `/lobby/${response.room.gameCode}`);
 		} catch (error) {
 			message = error instanceof Error ? error.message : 'Unable to create the room.';
 		} finally {
@@ -62,19 +65,21 @@
 </script>
 
 <Dialog.Root>
-	<Dialog.Trigger class="game-button">Create a room</Dialog.Trigger>
+	<Dialog.Trigger class="game-button">{solo ? 'Play solo' : 'Create a room'}</Dialog.Trigger>
 	<Dialog.Portal>
 		<Dialog.Overlay class="game-dialog-overlay" />
 		<Dialog.Content class="game-dialog" aria-describedby="create-room-description">
 			<div class="dialog-header">
 				<div>
 					<p class="eyebrow">New game</p>
-					<Dialog.Title>Create a room</Dialog.Title>
+					<Dialog.Title>{solo ? 'Play solo' : 'Create a room'}</Dialog.Title>
 				</div>
 				<Dialog.Close class="game-dialog-close" aria-label="Close dialog">&times;</Dialog.Close>
 			</div>
 			<Dialog.Description id="create-room-description">
-				Choose a quiz. Your lobby stays open for ten minutes, then closes automatically.
+				{solo
+					? 'Choose a quiz and start playing immediately.'
+					: 'Choose a quiz. Your lobby stays open for ten minutes, then closes automatically.'}
 			</Dialog.Description>
 			<form onsubmit={(event) => { event.preventDefault(); create(); }}>
 				<TextField label="Your nickname" placeholder="e.g. BlueFish99" bind:value={hostName} />
@@ -115,7 +120,7 @@
 					<label class="select-field"><span>Difficulty (0-1000)</span><input type="number" min="0" max="1000" step="100" bind:value={specificDifficulty} /></label>
 				{/if}
 				<Button type="submit" class="submit-button" disabled={creating}>
-					{creating ? 'Creating...' : 'Create room'}
+					{creating ? 'Creating...' : solo ? 'Start solo game' : 'Create room'}
 				</Button>
 				{#if message}<p class="message" aria-live="polite">{message}</p>{/if}
 			</form>

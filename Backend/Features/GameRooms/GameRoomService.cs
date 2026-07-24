@@ -69,7 +69,7 @@ public class GameRoomService
         }
     }
 
-    public void EnsureCanStartGame(string gameCode, string playerToken)
+    public void EnsureCanStartGame(string gameCode, string playerToken, bool allowSolo = false)
     {
         var room = GetRequiredRoom(gameCode);
         EnsureHost(room, playerToken);
@@ -79,7 +79,8 @@ public class GameRoomService
             throw new InvalidOperationException("The game room has already started.");
         }
 
-        if (!room.Players.Any(player => player.PlayerId != room.HostPlayerId && player.IsConnected))
+        if (!allowSolo
+            && !room.Players.Any(player => player.PlayerId != room.HostPlayerId && player.IsConnected))
         {
             throw new InvalidOperationException("At least one connected player is required to start the game.");
         }
@@ -158,10 +159,10 @@ public class GameRoomService
         return null;
     }
 
-    public GameRoom StartGame(string gameCode, string playerToken)
+    public GameRoom StartGame(string gameCode, string playerToken, bool allowSolo = false)
     {
         var room = GetRequiredRoom(gameCode);
-        EnsureCanStartGame(gameCode, playerToken);
+        EnsureCanStartGame(gameCode, playerToken, allowSolo);
 
         room.Status = GameStatus.Countdown;
         room.StartedAt = DateTime.UtcNow;

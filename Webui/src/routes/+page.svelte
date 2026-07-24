@@ -24,6 +24,7 @@
 				teams, and classrooms.
 			</p>
 			<div class="hero-actions">
+			    <CreateRoomDialog solo />
 				<CreateRoomDialog />
 				<JoinRoomDialog />
 			</div>

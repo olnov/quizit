@@ -1,8 +1,8 @@
 # QuizIt
 
-QuizIt is a real-time multiplayer quiz application for collaborative learning.
-Players join a room with a short code, answer questions together, and review
-explanations after each answer is revealed.
+QuizIt is a real-time quiz application for collaborative learning. Players can
+either join a room with a short code or start an immediate solo game, answer
+questions, and review explanations after each answer is revealed.
 
 The initial quiz format is inspired by *Who Wants to Be a Millionaire?*: every
 question has four answer options and one correct answer. Questions can include
@@ -11,6 +11,8 @@ code context, explanations, and a difficulty from 0 to 1000 in steps of 100.
 ## Features
 
 - Create a room for a selected quiz and share its game code.
+- Start a solo game directly from the same quiz and round settings, without a
+  lobby or waiting for another player.
 - Anonymous room-scoped player credentials with host-only game controls.
 - SignalR lobby updates with connected and disconnected player states.
 - Configurable question count, answer time limit, and question order.
@@ -18,6 +20,8 @@ code context, explanations, and a difficulty from 0 to 1000 in steps of 100.
 - Server-side answer validation, scoring, and persisted game session results.
 - Player-safe question payloads that do not expose correct answers before reveal.
 - Code blocks and post-answer explanation dialogs for learning-focused quizzes.
+- Protected quiz administration for `Admin` and `QuizAuthor` users, including
+  quiz editing, publishing, import, and export.
 
 ## Architecture
 
@@ -29,6 +33,8 @@ Database  PostgreSQL
 
 `GameRoom` is active runtime state stored in memory. `Quiz`, questions, answer
 options, and completed `GameSession` data are persisted in PostgreSQL.
+Solo games use the same room and session lifecycle, but the host starts the
+first question immediately and is the only player in the room.
 The current persisted schema is documented in [database-schema.sql](database-schema.sql).
 
 ## Repository layout
