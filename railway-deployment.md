@@ -42,6 +42,57 @@ encryption key to protect authorization codes and refresh tokens. Keep both
 values stable across deployments. Do not set `Oidc__AllowEphemeralCredentials`
 or `Oidc__RequireHttps=false` in Railway.
 
+### Generate OIDC credentials
+
+Run the following commands in PowerShell. They create a two-year RSA signing
+certificate with a private key and export it as a password-protected PFX file:
+
+```powershell
+$password = Read-Host "PFX password" -AsSecureString
+
+$certificate = New-SelfSignedCertificate `
+  -Type Custom `
+  -Subject "CN=QuizIt OIDC Signing" `
+  -CertStoreLocation "Cert:\CurrentUser\My" `
+  -KeyAlgorithm RSA `
+  -KeyLength 2048 `
+  -KeyUsage DigitalSignature `
+  -KeyExportPolicy Exportable `
+  -HashAlgorithm SHA256 `
+  -NotAfter (Get-Date).AddYears(2)
+
+Export-PfxCertificate `
+  -Cert $certificate `
+  -FilePath ".\quizit-oidc-signing.pfx" `
+  -Password $password
+```
+
+Copy the PFX file as a Base64 string and set it as
+`Oidc__SigningCertificateBase64` in Railway:
+
+```powershell
+[Convert]::ToBase64String(
+  [System.IO.File]::ReadAllBytes(".\quizit-oidc-signing.pfx")
+) | Set-Clipboard
+```
+
+Set `Oidc__SigningCertificatePassword` to the password entered above. Generate
+the 32-byte AES encryption key, then paste the Base64 value into
+`Oidc__EncryptionKeyBase64`:
+
+```powershell
+$key = New-Object byte[] 32
+$rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+$rng.GetBytes($key)
+$rng.Dispose()
+
+[Convert]::ToBase64String($key) | Set-Clipboard
+```
+
+Do not commit the PFX file, its password, or any of these Base64 values. Keep
+all three Railway variables stable: rotating a signing certificate or the
+encryption key invalidates issued access and refresh tokens.
+
 Configure the service health check path as `/health`.
 
 ## Frontend
