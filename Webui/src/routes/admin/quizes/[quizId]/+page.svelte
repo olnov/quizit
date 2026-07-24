@@ -9,6 +9,7 @@
         deleteAdminQuiz,
         getAdminQuiz,
         getQuizThemes,
+        moveAdminQuizToDraft,
         publishAdminQuiz,
         quizStatusLabel,
         updateAdminQuiz,
@@ -141,6 +142,21 @@
         }
     }
 
+    async function moveQuizToDraft() {
+        error = '';
+        if (dirty) {
+            error = 'Save changes before moving this quiz to draft.';
+            return;
+        }
+
+        try {
+            quiz = toEditableQuiz(await moveAdminQuizToDraft(quizId));
+            saveMessage = 'Quiz moved to draft.';
+        } catch (exception) {
+            error = getErrorMessage(exception);
+        }
+    }
+
     async function confirmAction() {
         const action = confirmation;
         confirmation = null;
@@ -204,6 +220,7 @@
             </div>
             <div class="editor-actions">
                 {#if quiz.status !== 1}<button type="button" class="text-action" onclick={publishQuiz}>Publish</button>{/if}
+                {#if quiz.status !== 0}<button type="button" class="text-action" onclick={moveQuizToDraft}>Move to draft</button>{/if}
                 {#if quiz.status !== 2}<button type="button" class="text-action" onclick={() => confirmation = 'archive'}>Archive</button>{/if}
                 <button type="button" class="text-action danger" onclick={() => confirmation = 'delete'}>Delete</button>
                 <Button type="button" disabled={saving || !dirty} onclick={saveQuiz}>{saving ? 'Saving' : 'Save changes'}</Button>

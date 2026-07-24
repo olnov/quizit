@@ -129,6 +129,10 @@ export async function archiveAdminQuiz(quizId: string): Promise<AdminQuiz> {
     return adminRequest(`/api/v1/admin/quizes/${encodeURIComponent(quizId)}/archive`, { method: 'POST' });
 }
 
+export async function moveAdminQuizToDraft(quizId: string): Promise<AdminQuiz> {
+    return adminRequest(`/api/v1/admin/quizes/${encodeURIComponent(quizId)}/draft`, { method: 'POST' });
+}
+
 export async function deleteAdminQuiz(quizId: string): Promise<void> {
     await adminRequest(`/api/v1/admin/quizes/${encodeURIComponent(quizId)}`, { method: 'DELETE' });
 }

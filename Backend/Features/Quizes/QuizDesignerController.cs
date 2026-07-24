@@ -62,6 +62,14 @@ public class QuizDesignerController(QuizDesigner quizDesigner) : ControllerBase
         return Ok(await quizDesigner.ArchiveQuizAsync(quizId, cancellationToken));
     }
 
+    [HttpPost("{quizId:guid}/draft")]
+    public async Task<ActionResult<AdminQuizDto>> MoveQuizToDraft(
+        Guid quizId,
+        CancellationToken cancellationToken)
+    {
+        return Ok(await quizDesigner.MoveQuizToDraftAsync(quizId, cancellationToken));
+    }
+
     [HttpDelete("{quizId:guid}")]
     public async Task<IActionResult> DeleteQuiz(Guid quizId, CancellationToken cancellationToken)
     {
