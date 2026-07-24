@@ -29,6 +29,11 @@ public class OidcController : Controller
         var user = await _userManager.GetUserAsync(User)
             ?? throw new InvalidOperationException("The authenticated user no longer exists.");
 
+        if (await _userManager.IsLockedOutAsync(user))
+        {
+            return Forbid(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+        }
+
         return SignIn(
             await CreatePrincipalAsync(user, request.GetScopes()),
             OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
@@ -50,6 +55,11 @@ public class OidcController : Controller
         var user = userId is null ? null : await _userManager.FindByIdAsync(userId);
 
         if (user is null)
+        {
+            return Forbid(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+        }
+
+        if (await _userManager.IsLockedOutAsync(user))
         {
             return Forbid(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
         }

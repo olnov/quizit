@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
+using Backend.Features.Users;
 
 namespace Backend.Features.Auth;
 

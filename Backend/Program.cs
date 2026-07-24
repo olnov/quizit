@@ -6,6 +6,7 @@ using Microsoft.IdentityModel.Tokens;
 using OpenIddict.Abstractions;
 using OpenIddict.Server.AspNetCore;
 using Backend.Features.Auth;
+using Backend.Features.Users;
 using Backend.Features.Quizes;
 using Backend.Features.GameRooms;
 using Backend.Features.GameSessions;
