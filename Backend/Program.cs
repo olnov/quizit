@@ -125,6 +125,7 @@ builder.Services.AddCors(options =>
     });
 });
 builder.Services.AddScoped<QuizCatalog>();
+builder.Services.AddScoped<QuizDesigner>();
 builder.Services.AddSingleton<GameRoomService>();
 builder.Services.AddHostedService<GameRoomCleanupService>();
 builder.Services.AddHostedService<GameQuestionTimeoutService>();

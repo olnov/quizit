@@ -272,6 +272,9 @@ namespace Backend.Migrations
                     b.Property<int>("QuestionsPerGame")
                         .HasColumnType("integer");
 
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
                     b.Property<Guid>("ThemeId")
                         .HasColumnType("uuid");
 

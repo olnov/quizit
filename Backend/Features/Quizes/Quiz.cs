@@ -6,6 +6,7 @@ public class Quiz
     public string Title { get; set; } = string.Empty;
     public Guid ThemeId { get; set; }
     public int QuestionsPerGame { get; set; } = 15;
+    public QuizStatus Status { get; set; } = QuizStatus.Draft;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public bool IsDeleted { get; set; } = false;

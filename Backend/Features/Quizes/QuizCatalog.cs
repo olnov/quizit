@@ -101,6 +101,7 @@ public class QuizCatalog
     public async Task<IReadOnlyCollection<Quiz>> GetQuizesAsync(CancellationToken cancellationToken)
     {
         return await _dbContext.Quizes
+            .Where(quiz => !quiz.IsDeleted && quiz.Status == QuizStatus.Published)
             .OrderBy(quiz => quiz.Title)
             .ToListAsync(cancellationToken);
     }
@@ -110,7 +111,11 @@ public class QuizCatalog
         CancellationToken cancellationToken)
     {
         var quiz = await _dbContext.Quizes
-            .SingleOrDefaultAsync(current => current.Id == quizId, cancellationToken)
+            .SingleOrDefaultAsync(
+                current => current.Id == quizId
+                    && !current.IsDeleted
+                    && current.Status == QuizStatus.Published,
+                cancellationToken)
             ?? throw new KeyNotFoundException($"Quiz with id '{quizId}' was not found.");
 
         return await _dbContext.Questions

@@ -366,12 +366,14 @@ public static class DevelopmentDataSeeder
                 Title = QuizTitle,
                 ThemeId = theme.Id,
                 QuestionsPerGame = AllObjectQuestions.Length,
+                Status = QuizStatus.Published,
             };
             dbContext.Quizes.Add(quiz);
         }
         else
         {
             quiz.QuestionsPerGame = AllObjectQuestions.Length;
+            quiz.Status = QuizStatus.Published;
         }
 
         var existingQuestions = await dbContext.Questions
