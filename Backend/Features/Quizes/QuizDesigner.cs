@@ -169,6 +169,15 @@ public class QuizDesigner(AppDbContext dbContext)
         return await ToAdminDtoAsync(quiz, cancellationToken);
     }
 
+    public async Task<AdminQuizDto> MoveQuizToDraftAsync(Guid quizId, CancellationToken cancellationToken)
+    {
+        var quiz = await GetRequiredQuizAsync(quizId, cancellationToken);
+        quiz.Status = QuizStatus.Draft;
+        quiz.UpdatedAt = DateTime.UtcNow;
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return await ToAdminDtoAsync(quiz, cancellationToken);
+    }
+
     public async Task DeleteQuizAsync(Guid quizId, CancellationToken cancellationToken)
     {
         var quiz = await GetRequiredQuizAsync(quizId, cancellationToken);
