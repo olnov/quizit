@@ -54,6 +54,35 @@ public class GameRoomController : ControllerBase
         });
     }
 
+    [HttpPost("solo")]
+    public async Task<IActionResult> CreateSoloRoom(
+        [FromBody] CreateRoomRequest request,
+        CancellationToken cancellationToken)
+    {
+        var room = _gameRoomService.CreateGameRoom(
+            request.QuizId,
+            request.HostName,
+            request.QuestionCount,
+            request.AnswerTimeLimitSeconds,
+            request.QuestionSelectionMode,
+            request.SpecificDifficulty);
+        var host = room.Players.Single(player => player.PlayerId == room.HostPlayerId);
+
+        var startedRoom = await StartRoomAsync(
+            room,
+            host.PlayerToken,
+            allowSolo: true,
+            cancellationToken: cancellationToken);
+
+        return Created($"/api/v1/game-rooms/{startedRoom.GameCode}",
+            new CreateRoomResponseDto
+            {
+                Room = GameRoomMapper.ToDto(startedRoom),
+                Credentials = GameRoomMapper.ToCredentials(host),
+        });
+
+    }
+
     [HttpPost("{gameCode}/start")]
     public async Task<IActionResult> StartGame(
         string gameCode,
@@ -68,17 +97,12 @@ public class GameRoomController : ControllerBase
             return Forbid();
         }
 
-        _gameRoomService.EnsureCanStartGame(gameCode, request.PlayerToken);
-
-        await _gameSessionService.CreateFromRoomAsync(room, cancellationToken);
-        _gameRoomService.StartGame(gameCode, request.PlayerToken);
-        var startedRoom = _gameRoomService.BeginQuestion(gameCode, request.PlayerToken);
+        var startedRoom = await StartRoomAsync(
+            room,
+            request.PlayerToken,
+            allowSolo: false,
+            cancellationToken: cancellationToken);
         var response = GameRoomMapper.ToDto(startedRoom);
-        await _gameHubContext.Clients.Group(gameCode)
-            .SendAsync("GameStarted", response, cancellationToken);
-        var question = await _gameSessionService.GetCurrentQuestionAsync(startedRoom, cancellationToken);
-        await _gameHubContext.Clients.Group(gameCode)
-            .SendAsync("QuestionStarted", question, cancellationToken);
 
         return Ok(response);
     }
@@ -268,5 +292,26 @@ public class GameRoomController : ControllerBase
         await _gameHubContext.Clients.Group(gameCode)
             .SendAsync("LobbyUpdated", response, cancellationToken);
         return Ok(response);
+    }
+
+    private async Task<GameRoom> StartRoomAsync(
+        GameRoom room,
+        string playerToken,
+        bool allowSolo,
+        CancellationToken cancellationToken)
+    {
+        _gameRoomService.EnsureCanStartGame(room.GameCode, playerToken, allowSolo);
+        await _gameSessionService.CreateFromRoomAsync(room, cancellationToken);
+        _gameRoomService.StartGame(room.GameCode, playerToken, allowSolo);
+        var startedRoom = _gameRoomService.BeginQuestion(room.GameCode, playerToken);
+
+        var response = GameRoomMapper.ToDto(startedRoom);
+        await _gameHubContext.Clients.Group(room.GameCode)
+            .SendAsync("GameStarted", response, cancellationToken);
+        var question = await _gameSessionService.GetCurrentQuestionAsync(startedRoom, cancellationToken);
+        await _gameHubContext.Clients.Group(room.GameCode)
+            .SendAsync("QuestionStarted", question, cancellationToken);
+
+        return startedRoom;
     }
 }

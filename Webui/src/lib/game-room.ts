@@ -30,6 +30,10 @@ export async function createRoom(quizId: string, hostName: string, questionCount
 	return request<CreateRoomResponse>('/api/v1/game-rooms', { method: 'POST', body: JSON.stringify({ quizId, hostName, questionCount, answerTimeLimitSeconds, questionSelectionMode, specificDifficulty }) });
 }
 
+export async function createSoloRoom(quizId: string, playerName: string, questionCount: number, answerTimeLimitSeconds: number | null, questionSelectionMode: number, specificDifficulty: number | null): Promise<CreateRoomResponse> {
+	return request<CreateRoomResponse>('/api/v1/game-rooms/solo', { method: 'POST', body: JSON.stringify({ quizId, hostName: playerName, questionCount, answerTimeLimitSeconds, questionSelectionMode, specificDifficulty }) });
+}
+
 export async function getQuizzes(): Promise<Array<{ id: string; title: string; questionsPerGame: number }>> {
 	return request<Array<{ id: string; title: string; questionsPerGame: number }>>('/api/v1/quizes', { method: 'GET' });
 }
