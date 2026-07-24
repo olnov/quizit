@@ -1,10 +1,13 @@
 using Backend.Features.Quizes;
 using Backend.Features.GameSessions;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Backend.Features.Auth;
+using OpenIddict.EntityFrameworkCore.Models;
 
 namespace Backend.Data;
 
-public class AppDbContext : DbContext
+public class AppDbContext : IdentityDbContext<QuizUser>
 {
     public AppDbContext(DbContextOptions<AppDbContext> options)
         : base(options)
@@ -22,6 +25,8 @@ public class AppDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        base.OnModelCreating(modelBuilder);
+        modelBuilder.UseOpenIddict();
         modelBuilder.Entity<Question>(entity =>
         {
             entity.HasOne<QuizTheme>()

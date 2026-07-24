@@ -1,6 +1,7 @@
 # Local docs
 aspnet-core-quiz-init-guide.md
 backend-gaps.md
+docs
 
 # Environment variables
 .env

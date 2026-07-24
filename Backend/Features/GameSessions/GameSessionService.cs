@@ -20,7 +20,11 @@ public class GameSessionService
         CancellationToken cancellationToken)
     {
         var quiz = await _dbContext.Quizes
-            .SingleOrDefaultAsync(current => current.Id == room.QuizId, cancellationToken)
+            .SingleOrDefaultAsync(
+                current => current.Id == room.QuizId
+                    && !current.IsDeleted
+                    && current.Status == QuizStatus.Published,
+                cancellationToken)
             ?? throw new KeyNotFoundException($"Quiz with id '{room.QuizId}' was not found.");
 
         var questionCandidates = await _dbContext.Questions

@@ -50,8 +50,15 @@ The project supports both Docker and Netlify builds:
   `NETLIFY=true` build variable. `DEPLOY_TARGET=netlify` is also supported for
   local verification.
 
-For a Netlify deployment, also set `VITE_API_BASE_URL` to the public Railway
-backend URL. It is embedded into the browser bundle at build time.
+For a Netlify deployment, set both `BACKEND_API_URL` and
+`BACKEND_PUBLIC_URL` to the public Railway backend URL. SvelteKit reads
+`BACKEND_API_URL` at runtime for its HTTP proxy; `BACKEND_PUBLIC_URL` is
+returned at runtime only for the SignalR WebSocket connection.
+
+Set these in the Netlify UI under **Environment variables**, not in
+`netlify.toml`. Their scope must include **Functions** (or use the default
+all-scopes setting), since the SvelteKit server endpoints run as Netlify
+Functions. Trigger a new deploy after changing either variable.
 
 Netlify uses `netlify.toml` to publish the adapter's `build` directory, which
 contains the SvelteKit CSS and JavaScript assets.

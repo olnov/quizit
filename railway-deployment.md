@@ -15,6 +15,13 @@ frontend. Do not deploy the root `docker-compose.yml`; it is for local use.
 DATABASE_URL=${{Postgres.DATABASE_URL}}
 Cors__AllowedOrigins__0=https://<frontend-domain>
 Database__SeedDemoData=false
+InitialAdmin__Username=<initial-admin-username>
+InitialAdmin__Email=<initial-admin-email>
+InitialAdmin__Password=<strong-initial-admin-password>
+Oidc__Issuer=https://<backend-domain>
+Oidc__SigningCertificateBase64=<base64-pfx-with-private-key>
+Oidc__SigningCertificatePassword=<pfx-password>
+Oidc__EncryptionKeyBase64=<base64-encoded-32-byte-key>
 ```
 
 The backend accepts both Npgsql `Host=...;Database=...` strings and Railway's
@@ -26,6 +33,15 @@ control, selecting `DATABASE_URL` from the PostgreSQL service; replace
 `PORT`, binds to all interfaces, trusts Railway's forwarded HTTPS headers, and
 exposes `GET /health` for a Railway health check.
 
+Set all three `InitialAdmin__...` variables only for the first deployment. The
+backend provisions the user idempotently and ensures it has the `Admin` role.
+After the account exists, remove all three variables from Railway.
+
+OpenIddict uses the signing certificate to issue standard JWTs and the
+encryption key to protect authorization codes and refresh tokens. Keep both
+values stable across deployments. Do not set `Oidc__AllowEphemeralCredentials`
+or `Oidc__RequireHttps=false` in Railway.
+
 Configure the service health check path as `/health`.
 
 ## Frontend
@@ -33,11 +49,17 @@ Configure the service health check path as `/health`.
 - Create a second service from the same GitHub repository.
 - Set **Root Directory** to `Webui`.
 - Generate a public domain for this service.
-- Set the Docker build argument `VITE_API_BASE_URL` to the backend public URL,
-  for example `https://api-production-xxxx.up.railway.app`.
+- Set `BACKEND_API_URL` to the backend URL reachable from the frontend host.
+- Set `BACKEND_PUBLIC_URL` to the public backend URL used by the browser for
+  the SignalR WebSocket connection.
+- When deploying the frontend to Railway, set `ORIGIN` to its exact public
+  frontend URL, for example `https://quizit-production.up.railway.app`.
 
-Vite embeds this value into the browser bundle, so changing it requires a new
-frontend build and deployment.
+For a Netlify frontend, both values are normally the backend's Railway public
+URL. The SvelteKit server reads them in Netlify Functions at runtime, so set
+them in the Netlify UI with the `Functions` scope (or all scopes). A variable
+change needs a new deploy, but does not require changing a build-time API
+variable or frontend source code.
 
 ## Runtime constraints
 

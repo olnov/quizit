@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 
 using Backend.Features.Quizes.Dtos;
 
@@ -23,6 +24,7 @@ public class QuizesController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = "Authoring")]
     public async Task<IActionResult> CreateQuiz(
         [FromBody] CreateQuizRequest request,
         CancellationToken cancellationToken)

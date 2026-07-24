@@ -1,6 +1,7 @@
 import { HubConnectionBuilder, LogLevel, type HubConnection } from '@microsoft/signalr';
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5298';
+const apiBaseUrl = '';
+let backendPublicUrl: Promise<string> | undefined;
 
 export type RoomPlayer = { playerId: string; name: string; score: number; isConnected: boolean; hasAnswered: boolean };
 export type GameRoom = { gameCode: string; quizId: string; status: number; lobbyExpiresAt: string; questionCount: number; answerTimeLimitSeconds: number | null; questionSelectionMode: number; specificDifficulty: number | null; answerDeadlineAt: string | null; currentQuestionIndex: number; players: RoomPlayer[] };
@@ -47,7 +48,7 @@ export async function restartRound(gameCode: string, playerToken: string): Promi
 export async function getCurrentQuestion(gameCode: string): Promise<CurrentQuestion> { return request<CurrentQuestion>(`/api/v1/game-rooms/${encodeURIComponent(gameCode)}/questions/current`, { method: 'GET' }); }
 
 export async function connectToRoom(gameCode: string, session: RoomSession, onLobbyUpdated: (room: GameRoom) => void, onCredentialsUpdated: (credentials: PlayerCredentials) => void, handlers: RoomEventHandlers = {}): Promise<HubConnection> {
-	const connection = new HubConnectionBuilder().withUrl(`${apiBaseUrl}/api/v1/hubs/game`).withAutomaticReconnect().configureLogging(LogLevel.Warning).build();
+	const connection = new HubConnectionBuilder().withUrl(`${await getBackendPublicUrl()}/api/v1/hubs/game`).withAutomaticReconnect().configureLogging(LogLevel.Warning).build();
 	const join = async () => {
 		const response = await connection.invoke<JoinGameResponse>('JoinGame', { gameCode, playerName: session.playerName, playerToken: session.playerToken || null });
 		onLobbyUpdated(response.room);
@@ -72,6 +73,14 @@ export function saveGameResult(result: GameCompleted): void { sessionStorage.set
 export function getGameResult(gameCode: string): GameCompleted | null { const value = sessionStorage.getItem(`quizit:result:${gameCode}`); if (!value) return null; try { return JSON.parse(value) as GameCompleted; } catch { return null; } }
 
 function tokenRequest<T>(path: string, playerToken: string): Promise<T> { return request<T>(path, { method: 'POST', body: JSON.stringify({ playerToken }) }); }
+async function getBackendPublicUrl(): Promise<string> {
+	backendPublicUrl ??= fetch('/api/runtime-config')
+		.then(async (response) => {
+			if (!response.ok) throw new Error('The realtime backend URL is not configured.');
+			return (await response.json() as { backendPublicUrl: string }).backendPublicUrl;
+		});
+	return backendPublicUrl;
+}
 async function request<T = void>(path: string, init: RequestInit): Promise<T> {
 	const response = await fetch(`${apiBaseUrl}${path}`, { headers: { 'Content-Type': 'application/json' }, ...init });
 	if (!response.ok) { const error = (await response.json().catch(() => ({}))) as ApiError; throw new Error(error.message ?? 'The request could not be completed.'); }

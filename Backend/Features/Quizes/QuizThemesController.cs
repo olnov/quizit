@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Backend.Features.Quizes.Dtos;
 
 namespace Backend.Features.Quizes;
@@ -22,6 +23,7 @@ public class QuizThemesController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = "Authoring")]
     public async Task<IActionResult> CreateTheme(
         [FromBody] CreateQuizThemeRequest request,
         CancellationToken cancellationToken)
@@ -38,6 +40,7 @@ public class QuizThemesController : ControllerBase
     }
 
     [HttpPost("{themeId:guid}/questions")]
+    [Authorize(Policy = "Authoring")]
     public async Task<IActionResult> CreateQuestion(
         Guid themeId,
         [FromBody] CreateQuestionRequest request,
