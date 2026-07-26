@@ -10,6 +10,7 @@ public static class GameRoomMapper
         {
             GameCode = room.GameCode,
             QuizId = room.QuizId,
+            IsSolo = room.IsSolo,
             Status = room.Status,
             LobbyExpiresAt = room.LobbyExpiresAt,
             QuestionCount = room.QuestionCount,

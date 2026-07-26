@@ -14,7 +14,8 @@ public class GameRoomService
         int questionCount,
         int? answerTimeLimitSeconds,
         QuestionSelectionMode questionSelectionMode,
-        int? specificDifficulty)
+        int? specificDifficulty,
+        bool isSolo = false)
     {
         ValidateQuestionSelection(questionSelectionMode, specificDifficulty);
         var hostPlayer = new PlayerState
@@ -25,6 +26,7 @@ public class GameRoomService
         var room = new GameRoom
         {
             QuizId = quizId,
+            IsSolo = isSolo,
             GameCode = GenerateGameCode(),
             HostPlayerId = hostPlayer.PlayerId,
             Players = new List<PlayerState> { hostPlayer },
