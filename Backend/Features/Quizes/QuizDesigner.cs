@@ -181,12 +181,6 @@ public class QuizDesigner(AppDbContext dbContext)
     public async Task DeleteQuizAsync(Guid quizId, CancellationToken cancellationToken)
     {
         var quiz = await GetRequiredQuizAsync(quizId, cancellationToken);
-
-        if (await dbContext.GameSessions.AnyAsync(session => session.QuizId == quizId, cancellationToken))
-        {
-            throw new InvalidOperationException("A quiz with game sessions cannot be deleted.");
-        }
-
         quiz.IsDeleted = true;
         quiz.DeletedAt = DateTime.UtcNow;
         quiz.UpdatedAt = DateTime.UtcNow;
