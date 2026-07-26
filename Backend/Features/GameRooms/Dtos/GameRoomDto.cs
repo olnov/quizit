@@ -4,6 +4,7 @@ public class GameRoomDto
 {
     public string GameCode { get; set; } = string.Empty;
     public Guid QuizId { get; set; }
+    public bool IsSolo { get; set; }
     public GameStatus Status { get; set; }
     public DateTime LobbyExpiresAt { get; set; }
     public int QuestionCount { get; set; }

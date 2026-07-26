@@ -4,14 +4,14 @@ const apiBaseUrl = '';
 let backendPublicUrl: Promise<string> | undefined;
 
 export type RoomPlayer = { playerId: string; name: string; score: number; isConnected: boolean; hasAnswered: boolean };
-export type GameRoom = { gameCode: string; quizId: string; status: number; lobbyExpiresAt: string; questionCount: number; answerTimeLimitSeconds: number | null; questionSelectionMode: number; specificDifficulty: number | null; answerDeadlineAt: string | null; currentQuestionIndex: number; players: RoomPlayer[] };
+export type GameRoom = { gameCode: string; quizId: string; isSolo: boolean; status: number; lobbyExpiresAt: string; questionCount: number; answerTimeLimitSeconds: number | null; questionSelectionMode: number; specificDifficulty: number | null; answerDeadlineAt: string | null; currentQuestionIndex: number; players: RoomPlayer[] };
 export type AnswerOption = { id: string; text: string };
 export type CurrentQuestion = { index: number; answerDeadlineAt: string | null; question: { id: string; text: string; codeContext: string | null; difficulty: number; options: AnswerOption[] } };
 export type Reveal = { questionId: string; correctOptionId: string; explanation: string | null };
 export type ScoreboardPlayer = { playerId: string; name: string; score: number };
 export type GameCompleted = { gameCode: string; players: ScoreboardPlayer[] };
 export type PlayerCredentials = { playerId: string; playerToken: string };
-export type RoomSession = PlayerCredentials & { playerName: string; isHost: boolean };
+export type RoomSession = PlayerCredentials & { playerName: string; isHost: boolean; isSolo?: boolean };
 
 type CreateRoomResponse = { room: GameRoom; credentials: PlayerCredentials };
 type JoinGameResponse = CreateRoomResponse;

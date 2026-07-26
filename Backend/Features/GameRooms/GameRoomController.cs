@@ -65,7 +65,8 @@ public class GameRoomController : ControllerBase
             request.QuestionCount,
             request.AnswerTimeLimitSeconds,
             request.QuestionSelectionMode,
-            request.SpecificDifficulty);
+            request.SpecificDifficulty,
+            isSolo: true);
         var host = room.Players.Single(player => player.PlayerId == room.HostPlayerId);
 
         var startedRoom = await StartRoomAsync(
@@ -100,7 +101,7 @@ public class GameRoomController : ControllerBase
         var startedRoom = await StartRoomAsync(
             room,
             request.PlayerToken,
-            allowSolo: false,
+            allowSolo: room.IsSolo,
             cancellationToken: cancellationToken);
         var response = GameRoomMapper.ToDto(startedRoom);
 

@@ -53,7 +53,8 @@
 			saveRoomSession(response.room.gameCode, {
 				...response.credentials,
 				playerName: hostName.trim(),
-				isHost: true
+				isHost: true,
+				isSolo: solo
 			});
 			await goto(solo ? `/game/${response.room.gameCode}` : `/lobby/${response.room.gameCode}`);
 		} catch (error) {
