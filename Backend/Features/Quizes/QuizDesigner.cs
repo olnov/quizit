@@ -277,14 +277,17 @@ public class QuizDesigner(AppDbContext dbContext)
         }
 
         var themeName = document.Theme.Trim();
-        if (await dbContext.QuizThemes.AnyAsync(theme => theme.Name == themeName, cancellationToken))
-        {
-            throw new InvalidOperationException($"A quiz theme named '{themeName}' already exists.");
-        }
-
         await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
 
-        var theme = new QuizTheme { Name = themeName };
+        var theme = await dbContext.QuizThemes
+            .SingleOrDefaultAsync(current => current.Name == themeName, cancellationToken);
+
+        if (theme is null)
+        {
+            theme = new QuizTheme { Name = themeName };
+            dbContext.QuizThemes.Add(theme);
+        }
+
         var quiz = new Quiz
         {
             Title = document.Quiz.Title.Trim(),
@@ -293,7 +296,6 @@ public class QuizDesigner(AppDbContext dbContext)
             Status = QuizStatus.Draft,
         };
 
-        dbContext.QuizThemes.Add(theme);
         dbContext.Quizes.Add(quiz);
         foreach (var question in document.Questions)
         {
