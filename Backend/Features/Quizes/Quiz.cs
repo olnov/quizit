@@ -11,4 +11,5 @@ public class Quiz
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public bool IsDeleted { get; set; } = false;
     public DateTime? DeletedAt { get; set; }
+    public List<QuizQuestion> QuizQuestions { get; set; } = new();
 }

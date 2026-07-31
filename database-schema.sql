@@ -68,6 +68,23 @@ COMMENT ON COLUMN "Quizes"."Status" IS
 COMMENT ON COLUMN "Quizes"."IsDeleted" IS
     'Soft-deleted quizzes are not returned by public or authoring lists.';
 
+CREATE TABLE "QuizQuestions" (
+    "QuizId" uuid NOT NULL,
+    "QuestionId" uuid NOT NULL,
+    CONSTRAINT "PK_QuizQuestions" PRIMARY KEY ("QuizId", "QuestionId"),
+    CONSTRAINT "FK_QuizQuestions_Quizes_QuizId"
+        FOREIGN KEY ("QuizId") REFERENCES "Quizes" ("Id")
+        ON DELETE CASCADE,
+    CONSTRAINT "FK_QuizQuestions_Questions_QuestionId"
+        FOREIGN KEY ("QuestionId") REFERENCES "Questions" ("Id")
+        ON DELETE RESTRICT
+);
+
+CREATE INDEX "IX_QuizQuestions_QuestionId" ON "QuizQuestions" ("QuestionId");
+
+COMMENT ON TABLE "QuizQuestions" IS
+    'Explicit question membership for each quiz; themes do not determine gameplay selection.';
+
 CREATE TABLE "GameSessions" (
     "Id" uuid NOT NULL,
     "GameRoomId" text NOT NULL,

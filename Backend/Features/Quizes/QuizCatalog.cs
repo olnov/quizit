@@ -118,9 +118,9 @@ public class QuizCatalog
                 cancellationToken)
             ?? throw new KeyNotFoundException($"Quiz with id '{quizId}' was not found.");
 
-        return await _dbContext.Questions
-            .Where(question => question.ThemeId == quiz.ThemeId)
-            .GroupBy(question => question.Difficulty)
+        return await _dbContext.QuizQuestions
+            .Where(link => link.QuizId == quiz.Id)
+            .GroupBy(link => link.Question.Difficulty)
             .OrderBy(group => group.Key)
             .Select(group => new DifficultyCountDto
             {
