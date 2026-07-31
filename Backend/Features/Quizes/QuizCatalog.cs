@@ -74,9 +74,10 @@ public class QuizCatalog
 
         var questionId = Guid.NewGuid();
         var options = optionTexts
-            .Select(optionText => new AnswerOption
+            .Select((optionText, index) => new AnswerOption
             {
                 QuestionId = questionId,
+                DisplayOrder = index,
                 Text = optionText.Trim(),
             })
             .ToList();

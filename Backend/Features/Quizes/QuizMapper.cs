@@ -33,7 +33,7 @@ public static class QuizMapper
             CodeContext = question.CodeContext,
             Difficulty = question.Difficulty,
             Options = question.Options
-                .OrderBy(option => option.Id)
+                .OrderBy(option => option.DisplayOrder)
                 .Select(option => new AnswerOptionDto
                 {
                     Id = option.Id,

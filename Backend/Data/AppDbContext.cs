@@ -43,6 +43,12 @@ public class AppDbContext : IdentityDbContext<QuizUser>
             entity.HasIndex(question => question.ThemeId);
         });
 
+        modelBuilder.Entity<AnswerOption>(entity =>
+        {
+            entity.HasIndex(option => new { option.QuestionId, option.DisplayOrder })
+                .IsUnique();
+        });
+
         modelBuilder.Entity<Quiz>(entity =>
         {
             entity.HasOne<QuizTheme>()
