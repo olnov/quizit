@@ -32,11 +32,14 @@ public static class QuizMapper
             Text = question.Text,
             CodeContext = question.CodeContext,
             Difficulty = question.Difficulty,
-            Options = question.Options.Select(option => new AnswerOptionDto
-            {
-                Id = option.Id,
-                Text = option.Text,
-            }).ToList(),
+            Options = question.Options
+                .OrderBy(option => option.Id)
+                .Select(option => new AnswerOptionDto
+                {
+                    Id = option.Id,
+                    Text = option.Text,
+                })
+                .ToList(),
         };
     }
 }
