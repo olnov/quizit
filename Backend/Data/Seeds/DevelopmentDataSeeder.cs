@@ -410,6 +410,19 @@ public static class DevelopmentDataSeeder
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
+
+        var questionIds = await dbContext.Questions
+            .Where(question => AllObjectQuestions.Select(seedQuestion => seedQuestion.Text).Contains(question.Text))
+            .Select(question => question.Id)
+            .ToListAsync(cancellationToken);
+        var linkedQuestionIds = await dbContext.QuizQuestions
+            .Where(link => link.QuizId == quiz.Id)
+            .Select(link => link.QuestionId)
+            .ToListAsync(cancellationToken);
+        dbContext.QuizQuestions.AddRange(questionIds
+            .Except(linkedQuestionIds)
+            .Select(questionId => new QuizQuestion { QuizId = quiz.Id, QuestionId = questionId }));
+        await dbContext.SaveChangesAsync(cancellationToken);
     }
 
     private sealed record SeedQuestion(

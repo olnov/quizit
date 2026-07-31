@@ -18,6 +18,7 @@ public class AppDbContext : IdentityDbContext<QuizUser>
     public DbSet<Question> Questions => Set<Question>();
     public DbSet<AnswerOption> AnswerOptions => Set<AnswerOption>();
     public DbSet<Quiz> Quizes => Set<Quiz>();
+    public DbSet<QuizQuestion> QuizQuestions => Set<QuizQuestion>();
     public DbSet<GameSession> GameSessions => Set<GameSession>();
     public DbSet<GameSessionPlayer> GameSessionPlayers => Set<GameSessionPlayer>();
     public DbSet<GameSessionQuestion> GameSessionQuestions => Set<GameSessionQuestion>();
@@ -50,6 +51,20 @@ public class AppDbContext : IdentityDbContext<QuizUser>
                 .OnDelete(DeleteBehavior.Restrict);
 
             entity.HasIndex(quiz => quiz.ThemeId);
+        });
+
+        modelBuilder.Entity<QuizQuestion>(entity =>
+        {
+            entity.HasKey(link => new { link.QuizId, link.QuestionId });
+            entity.HasOne(link => link.Quiz)
+                .WithMany(quiz => quiz.QuizQuestions)
+                .HasForeignKey(link => link.QuizId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(link => link.Question)
+                .WithMany(question => question.QuizQuestions)
+                .HasForeignKey(link => link.QuestionId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(link => link.QuestionId);
         });
 
         modelBuilder.Entity<GameSessionPlayer>(entity =>

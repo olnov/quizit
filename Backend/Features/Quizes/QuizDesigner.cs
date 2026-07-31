@@ -34,7 +34,7 @@ public class QuizDesigner(AppDbContext dbContext)
                     .Select(theme => theme.Name)
                     .FirstOrDefault() ?? string.Empty,
                 QuestionsPerGame = quiz.QuestionsPerGame,
-                QuestionCount = dbContext.Questions.Count(question => question.ThemeId == quiz.ThemeId),
+                QuestionCount = dbContext.QuizQuestions.Count(link => link.QuizId == quiz.Id),
                 Status = quiz.Status,
                 CreatedAt = quiz.CreatedAt,
                 UpdatedAt = quiz.UpdatedAt,
@@ -87,7 +87,8 @@ public class QuizDesigner(AppDbContext dbContext)
 
         var quiz = await GetRequiredQuizAsync(quizId, cancellationToken);
         var existingQuestions = await dbContext.Questions
-            .Where(question => question.ThemeId == request.ThemeId)
+            .Where(question => dbContext.QuizQuestions.Any(link =>
+                link.QuizId == quizId && link.QuestionId == question.Id))
             .Include(question => question.Options)
             .ToListAsync(cancellationToken);
 
@@ -104,7 +105,7 @@ public class QuizDesigner(AppDbContext dbContext)
 
         if (requestQuestionIds.Any(id => !existingById.ContainsKey(id)))
         {
-            throw new ArgumentException("All existing questions must belong to the selected quiz theme.");
+            throw new ArgumentException("All existing questions must belong to the quiz.");
         }
 
         var changedQuestions = request.Questions
@@ -114,16 +115,18 @@ public class QuizDesigner(AppDbContext dbContext)
             .Where(question => !requestQuestionIds.Contains(question.Id))
             .ToList();
 
-        await EnsureQuestionsAreNotUsedInSessionsAsync(
-            changedQuestions.Where(question => question.Id.HasValue).Select(question => question.Id!.Value)
-                .Concat(removedQuestions.Select(question => question.Id)),
+        await EnsureQuestionsCanBeChangedAsync(
+            quizId,
+            changedQuestions.Where(question => question.Id.HasValue).Select(question => question.Id!.Value),
             cancellationToken);
 
         foreach (var questionRequest in changedQuestions)
         {
             if (!questionRequest.Id.HasValue)
             {
-                dbContext.Questions.Add(CreateQuestion(request.ThemeId, questionRequest));
+                var newQuestion = CreateQuestion(request.ThemeId, questionRequest);
+                dbContext.Questions.Add(newQuestion);
+                dbContext.QuizQuestions.Add(new QuizQuestion { QuizId = quizId, QuestionId = newQuestion.Id });
                 continue;
             }
 
@@ -131,7 +134,25 @@ public class QuizDesigner(AppDbContext dbContext)
             ApplyQuestion(question, questionRequest);
         }
 
-        dbContext.Questions.RemoveRange(removedQuestions);
+        dbContext.QuizQuestions.RemoveRange(removedQuestions.Select(question =>
+            new QuizQuestion { QuizId = quizId, QuestionId = question.Id }));
+
+        var removableQuestionIds = await dbContext.QuizQuestions
+            .Where(link => removedQuestions.Select(question => question.Id).Contains(link.QuestionId)
+                && link.QuizId != quizId)
+            .Select(link => link.QuestionId)
+            .ToListAsync(cancellationToken);
+        var questionsWithoutOtherLinks = removedQuestions
+            .Where(question => !removableQuestionIds.Contains(question.Id))
+            .ToList();
+        var historicallyUsedQuestionIds = await dbContext.GameSessionQuestions
+            .Where(sessionQuestion => questionsWithoutOtherLinks.Select(question => question.Id)
+                .Contains(sessionQuestion.QuestionId))
+            .Select(sessionQuestion => sessionQuestion.QuestionId)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+        dbContext.Questions.RemoveRange(questionsWithoutOtherLinks
+            .Where(question => !historicallyUsedQuestionIds.Contains(question.Id)));
 
         quiz.Title = request.Title.Trim();
         quiz.ThemeId = request.ThemeId;
@@ -145,13 +166,13 @@ public class QuizDesigner(AppDbContext dbContext)
     public async Task<AdminQuizDto> PublishQuizAsync(Guid quizId, CancellationToken cancellationToken)
     {
         var quiz = await GetRequiredQuizAsync(quizId, cancellationToken);
-        var questionCount = await dbContext.Questions
-            .CountAsync(question => question.ThemeId == quiz.ThemeId, cancellationToken);
+        var questionCount = await dbContext.QuizQuestions
+            .CountAsync(link => link.QuizId == quiz.Id, cancellationToken);
 
         if (questionCount < quiz.QuestionsPerGame)
         {
             throw new InvalidOperationException(
-                "A quiz cannot be published until its theme has enough questions for one game.");
+                "A quiz cannot be published until it has enough questions for one game.");
         }
 
         quiz.Status = QuizStatus.Published;
@@ -277,14 +298,17 @@ public class QuizDesigner(AppDbContext dbContext)
         }
 
         var themeName = document.Theme.Trim();
-        if (await dbContext.QuizThemes.AnyAsync(theme => theme.Name == themeName, cancellationToken))
-        {
-            throw new InvalidOperationException($"A quiz theme named '{themeName}' already exists.");
-        }
-
         await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
 
-        var theme = new QuizTheme { Name = themeName };
+        var theme = await dbContext.QuizThemes
+            .SingleOrDefaultAsync(current => current.Name == themeName, cancellationToken);
+
+        if (theme is null)
+        {
+            theme = new QuizTheme { Name = themeName };
+            dbContext.QuizThemes.Add(theme);
+        }
+
         var quiz = new Quiz
         {
             Title = document.Quiz.Title.Trim(),
@@ -293,11 +317,12 @@ public class QuizDesigner(AppDbContext dbContext)
             Status = QuizStatus.Draft,
         };
 
-        dbContext.QuizThemes.Add(theme);
         dbContext.Quizes.Add(quiz);
-        foreach (var question in document.Questions)
+        foreach (var questionRequest in document.Questions)
         {
-            dbContext.Questions.Add(CreateQuestion(theme.Id, question));
+            var question = CreateQuestion(theme.Id, questionRequest);
+            dbContext.Questions.Add(question);
+            dbContext.QuizQuestions.Add(new QuizQuestion { QuizId = quiz.Id, QuestionId = question.Id });
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -387,7 +412,8 @@ public class QuizDesigner(AppDbContext dbContext)
         var theme = await GetRequiredThemeAsync(quiz.ThemeId, cancellationToken);
         var questions = await dbContext.Questions
             .AsNoTracking()
-            .Where(question => question.ThemeId == quiz.ThemeId)
+            .Where(question => dbContext.QuizQuestions.Any(link =>
+                link.QuizId == quiz.Id && link.QuestionId == question.Id))
             .Include(question => question.Options)
             .OrderBy(question => question.Difficulty)
             .ThenBy(question => question.Text)
@@ -443,6 +469,26 @@ public class QuizDesigner(AppDbContext dbContext)
         {
             throw new InvalidOperationException(
                 "Questions that have been used in a game session cannot be changed or deleted.");
+        }
+    }
+
+    private async Task EnsureQuestionsCanBeChangedAsync(
+        Guid quizId,
+        IEnumerable<Guid> questionIds,
+        CancellationToken cancellationToken)
+    {
+        var ids = questionIds.Distinct().ToArray();
+        if (ids.Length == 0)
+        {
+            return;
+        }
+
+        await EnsureQuestionsAreNotUsedInSessionsAsync(ids, cancellationToken);
+        if (await dbContext.QuizQuestions.AnyAsync(
+                link => ids.Contains(link.QuestionId) && link.QuizId != quizId,
+                cancellationToken))
+        {
+            throw new InvalidOperationException("Questions shared with another quiz cannot be changed.");
         }
     }
 

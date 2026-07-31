@@ -27,30 +27,30 @@ public class GameSessionService
                 cancellationToken)
             ?? throw new KeyNotFoundException($"Quiz with id '{room.QuizId}' was not found.");
 
-        var questionCandidates = await _dbContext.Questions
-            .Where(question => question.ThemeId == quiz.ThemeId)
-            .Select(question => new { question.Id, question.Difficulty })
+        var questionCandidates = await _dbContext.QuizQuestions
+            .Where(link => link.QuizId == quiz.Id)
+            .Select(link => new { link.QuestionId, link.Question.Difficulty })
             .ToListAsync(cancellationToken);
 
         var selectedQuestionIds = room.QuestionSelectionMode switch
         {
             QuestionSelectionMode.AscendingDifficulty => questionCandidates
                 .OrderBy(question => question.Difficulty)
-                .ThenBy(question => question.Id)
+                .ThenBy(question => question.QuestionId)
                 .Take(room.QuestionCount)
-                .Select(question => question.Id)
+                .Select(question => question.QuestionId)
                 .ToList(),
             QuestionSelectionMode.SpecificDifficulty when room.SpecificDifficulty is not null => questionCandidates
                 .Where(question => question.Difficulty == room.SpecificDifficulty.Value)
                 .OrderBy(_ => Random.Shared.Next())
                 .Take(room.QuestionCount)
-                .Select(question => question.Id)
+                .Select(question => question.QuestionId)
                 .ToList(),
             QuestionSelectionMode.SpecificDifficulty => throw new InvalidOperationException("A specific difficulty is required for this question selection mode."),
             QuestionSelectionMode.Mixed => questionCandidates
                 .OrderBy(_ => Random.Shared.Next())
                 .Take(room.QuestionCount)
-                .Select(question => question.Id)
+                .Select(question => question.QuestionId)
                 .ToList(),
             _ => throw new ArgumentOutOfRangeException(nameof(room.QuestionSelectionMode)),
         };

@@ -10,4 +10,5 @@ public class Question
     public int Difficulty { get; set; }
     public List<AnswerOption> Options { get; set; } = new();
     public Guid CorrectOptionId { get; set; }
+    public List<QuizQuestion> QuizQuestions { get; set; } = new();
 }

@@ -66,6 +66,24 @@ public class GameRulesTests
     }
 
     [Fact]
+    public async Task CreateFromRoomAsync_OnlySelectsQuestionsLinkedToRequestedQuiz()
+    {
+        await using var dbContext = CreateDbContext();
+        var (quiz, questions) = await SeedQuizAsync(dbContext, questionsPerGame: 1, questionCount: 1);
+        var otherQuiz = new Quiz { ThemeId = quiz.ThemeId, Title = "Other quiz", QuestionsPerGame = 1 };
+        var otherQuestion = CreateQuestion(quiz.ThemeId, 2);
+        dbContext.AddRange(otherQuiz, otherQuestion);
+        dbContext.QuizQuestions.Add(new QuizQuestion { QuizId = otherQuiz.Id, QuestionId = otherQuestion.Id });
+        await dbContext.SaveChangesAsync();
+
+        var session = await new GameSessionService(dbContext)
+            .CreateFromRoomAsync(CreateRoom(quiz.Id, 1), CancellationToken.None);
+
+        Assert.Equal(questions.Single().Id, session.Questions.Single().QuestionId);
+        Assert.DoesNotContain(session.Questions, item => item.QuestionId == otherQuestion.Id);
+    }
+
+    [Fact]
     public async Task SubmitAnswerAsync_AwardsPointsForCorrectAnswer()
     {
         await using var dbContext = CreateDbContext();
@@ -140,6 +158,7 @@ public class GameRulesTests
             ThemeId = theme.Id,
             Title = "Science Quiz",
             QuestionsPerGame = questionsPerGame,
+            Status = QuizStatus.Published,
         };
         var questions = Enumerable.Range(1, questionCount)
             .Select(index => CreateQuestion(theme.Id, index))
@@ -147,6 +166,11 @@ public class GameRulesTests
 
         dbContext.AddRange(theme, quiz);
         dbContext.Questions.AddRange(questions);
+        dbContext.QuizQuestions.AddRange(questions.Select(question => new QuizQuestion
+        {
+            QuizId = quiz.Id,
+            QuestionId = question.Id,
+        }));
         await dbContext.SaveChangesAsync();
         return (quiz, questions);
     }

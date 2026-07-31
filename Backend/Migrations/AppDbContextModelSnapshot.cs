@@ -292,6 +292,21 @@ namespace Backend.Migrations
                     b.ToTable("Quizes");
                 });
 
+            modelBuilder.Entity("Backend.Features.Quizes.QuizQuestion", b =>
+                {
+                    b.Property<Guid>("QuizId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("QuestionId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("QuizId", "QuestionId");
+
+                    b.HasIndex("QuestionId");
+
+                    b.ToTable("QuizQuestions");
+                });
+
             modelBuilder.Entity("Backend.Features.Quizes.QuizTheme", b =>
                 {
                     b.Property<Guid>("Id")
@@ -701,6 +716,25 @@ namespace Backend.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Backend.Features.Quizes.QuizQuestion", b =>
+                {
+                    b.HasOne("Backend.Features.Quizes.Question", "Question")
+                        .WithMany("QuizQuestions")
+                        .HasForeignKey("QuestionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Backend.Features.Quizes.Quiz", "Quiz")
+                        .WithMany("QuizQuestions")
+                        .HasForeignKey("QuizId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Question");
+
+                    b.Navigation("Quiz");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
@@ -788,6 +822,13 @@ namespace Backend.Migrations
             modelBuilder.Entity("Backend.Features.Quizes.Question", b =>
                 {
                     b.Navigation("Options");
+
+                    b.Navigation("QuizQuestions");
+                });
+
+            modelBuilder.Entity("Backend.Features.Quizes.Quiz", b =>
+                {
+                    b.Navigation("QuizQuestions");
                 });
 
             modelBuilder.Entity("OpenIddict.EntityFrameworkCore.Models.OpenIddictEntityFrameworkCoreApplication", b =>

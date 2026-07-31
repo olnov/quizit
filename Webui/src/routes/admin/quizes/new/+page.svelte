@@ -50,6 +50,13 @@
             return;
         }
 
+        const existingTheme = themes.find((theme) => theme.name === name);
+        if (existingTheme) {
+            themeId = existingTheme.id;
+            newThemeName = '';
+            return;
+        }
+
         creatingTheme = true;
         try {
             const theme = await createQuizTheme(name);
