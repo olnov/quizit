@@ -539,17 +539,34 @@ public class QuizDesigner(AppDbContext dbContext)
         question.Explanation = NormalizeOptionalText(explanation);
         question.Difficulty = difficulty;
 
-        question.Options.Clear();
-        foreach (var optionText in optionTexts)
+        var options = question.Options.OrderBy(option => option.Id).ToList();
+        if (options.Count == 0)
         {
-            question.Options.Add(new AnswerOption
+            foreach (var optionText in optionTexts)
             {
-                QuestionId = question.Id,
-                Text = optionText.Trim(),
-            });
+                question.Options.Add(new AnswerOption
+                {
+                    QuestionId = question.Id,
+                    Text = optionText.Trim(),
+                });
+            }
+
+            options = question.Options.OrderBy(option => option.Id).ToList();
+        }
+        else if (options.Count != optionTexts.Count)
+        {
+            throw new InvalidOperationException(
+                $"Question with id '{question.Id}' must have exactly {optionTexts.Count} answer options.");
+        }
+        else
+        {
+            for (var index = 0; index < options.Count; index++)
+            {
+                options[index].Text = optionTexts[index].Trim();
+            }
         }
 
-        question.CorrectOptionId = question.Options[correctOptionIndex].Id;
+        question.CorrectOptionId = options[correctOptionIndex].Id;
     }
 
     private static void ValidateQuizMetadata(string title, int questionsPerGame)
