@@ -336,6 +336,7 @@
 		overscroll-behavior: contain;
 		padding-right: 10px;
 		scrollbar-gutter: stable;
+		white-space: pre-wrap;
 	}
 	:global(.explanation-dialog) {
 		display: flex;
