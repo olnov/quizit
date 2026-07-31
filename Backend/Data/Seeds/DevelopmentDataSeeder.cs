@@ -393,7 +393,12 @@ public static class DevelopmentDataSeeder
 
             var questionId = Guid.NewGuid();
             var options = seedQuestion.Options
-                .Select(text => new AnswerOption { QuestionId = questionId, Text = text })
+                .Select((text, index) => new AnswerOption
+                {
+                    QuestionId = questionId,
+                    DisplayOrder = index,
+                    Text = text,
+                })
                 .ToList();
 
             dbContext.Questions.Add(new Question

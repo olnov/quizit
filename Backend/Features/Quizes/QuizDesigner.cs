@@ -435,7 +435,7 @@ public class QuizDesigner(AppDbContext dbContext)
 
     private static AdminQuestionDto ToAdminQuestionDto(Question question)
     {
-        var options = question.Options.OrderBy(option => option.Id).ToList();
+        var options = question.Options.OrderBy(option => option.DisplayOrder).ToList();
         var correctOptionIndex = options.FindIndex(option => option.Id == question.CorrectOptionId);
         if (correctOptionIndex < 0)
         {
@@ -494,7 +494,7 @@ public class QuizDesigner(AppDbContext dbContext)
 
     private static bool HasQuestionChanged(Question question, UpdateQuestionRequest request)
     {
-        var options = question.Options.OrderBy(option => option.Id).ToList();
+        var options = question.Options.OrderBy(option => option.DisplayOrder).ToList();
         var currentCorrectOptionIndex = options.FindIndex(option => option.Id == question.CorrectOptionId);
         return question.Text != request.Text.Trim()
             || question.CodeContext != NormalizeOptionalText(request.CodeContext)
@@ -539,19 +539,20 @@ public class QuizDesigner(AppDbContext dbContext)
         question.Explanation = NormalizeOptionalText(explanation);
         question.Difficulty = difficulty;
 
-        var options = question.Options.OrderBy(option => option.Id).ToList();
+        var options = question.Options.OrderBy(option => option.DisplayOrder).ToList();
         if (options.Count == 0)
         {
-            foreach (var optionText in optionTexts)
+            foreach (var (optionText, index) in optionTexts.Select((text, index) => (text, index)))
             {
                 question.Options.Add(new AnswerOption
                 {
                     QuestionId = question.Id,
+                    DisplayOrder = index,
                     Text = optionText.Trim(),
                 });
             }
 
-            options = question.Options.OrderBy(option => option.Id).ToList();
+            options = question.Options.OrderBy(option => option.DisplayOrder).ToList();
         }
         else if (options.Count != optionTexts.Count)
         {

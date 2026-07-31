@@ -33,6 +33,7 @@ COMMENT ON COLUMN "Questions"."CorrectOptionId" IS
 CREATE TABLE "AnswerOptions" (
     "Id" uuid NOT NULL,
     "QuestionId" uuid NOT NULL,
+    "DisplayOrder" integer NOT NULL,
     "Text" text NOT NULL,
     CONSTRAINT "PK_AnswerOptions" PRIMARY KEY ("Id"),
     CONSTRAINT "FK_AnswerOptions_Questions_QuestionId"
@@ -41,6 +42,8 @@ CREATE TABLE "AnswerOptions" (
 );
 
 CREATE INDEX "IX_AnswerOptions_QuestionId" ON "AnswerOptions" ("QuestionId");
+CREATE UNIQUE INDEX "IX_AnswerOptions_QuestionId_DisplayOrder"
+    ON "AnswerOptions" ("QuestionId", "DisplayOrder");
 
 COMMENT ON TABLE "AnswerOptions" IS
     'Each question must have exactly four options; the cardinality is validated by application code.';
