@@ -174,7 +174,7 @@
 						<Dialog.Trigger class="game-button explanation-button">Show explanation</Dialog.Trigger>
 						<Dialog.Portal>
 							<Dialog.Overlay class="game-dialog-overlay" />
-							<Dialog.Content class="game-dialog" aria-describedby="explanation-description">
+							<Dialog.Content class="game-dialog explanation-dialog" aria-describedby="explanation-description">
 								<div class="explanation-header">
 									<div>
 										<p class="eyebrow">Learning note</p>
@@ -327,9 +327,21 @@
 	}
 	:global(.explanation-text) {
 		color: var(--color-muted);
+		flex: 1 1 auto;
 		font-size: 1rem;
 		line-height: 1.6;
 		margin: 0;
+		min-height: 0;
+		overflow-y: auto;
+		overscroll-behavior: contain;
+		padding-right: 10px;
+		scrollbar-gutter: stable;
+	}
+	:global(.explanation-dialog) {
+		display: flex;
+		flex-direction: column;
+		height: min(560px, calc(100vh - 32px));
+		overflow: hidden;
 	}
 	:global(.end-button) {
 		background: #f5d7d1;
