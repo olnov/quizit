@@ -55,6 +55,17 @@ Copy-Item .env.example .env
 docker compose up --build -d
 ```
 
+The root `.env` is read by Docker Compose. For local Docker development, keep:
+
+```env
+PUBLIC_API_BASE_URL=http://localhost:8080
+FRONTEND_ORIGIN=http://localhost:3000
+```
+
+Docker Compose passes `PUBLIC_API_BASE_URL` to the frontend container as
+`BACKEND_PUBLIC_URL`. Do not add `BACKEND_PUBLIC_URL` to the root `.env` for
+this flow.
+
 Open:
 
 - Frontend: `http://localhost:3000`
@@ -86,9 +97,22 @@ Frontend:
 
 ```powershell
 cd Webui
+Copy-Item .env.example .env
 npm install
 npm run dev
 ```
+
+`Webui/.env` is read by the local SvelteKit server. When the backend runs
+directly on `http://localhost:5298`, it must contain both variables:
+
+```env
+BACKEND_API_URL=http://localhost:5298
+BACKEND_PUBLIC_URL=http://localhost:5298
+```
+
+`BACKEND_API_URL` is used by SvelteKit's server-side HTTP proxy. The browser
+uses `BACKEND_PUBLIC_URL` only for the direct SignalR connection. The root
+`PUBLIC_API_BASE_URL` variable is not read by `npm run dev`.
 
 ## Deployment
 
@@ -107,6 +131,14 @@ uses `BACKEND_PUBLIC_URL` only for the direct SignalR WebSocket connection at
 `/api/v1/hubs/game`. On Netlify and Railway these values normally match. A
 variable change requires a new Netlify deploy, but does not require changing a
 build-time API variable or frontend source code.
+
+Variable reference:
+
+| Where the frontend runs | HTTP proxy variable | SignalR variable |
+| --- | --- | --- |
+| Local `npm run dev` in `Webui` | `Webui/.env`: `BACKEND_API_URL` | `Webui/.env`: `BACKEND_PUBLIC_URL` |
+| Docker Compose | fixed as `http://backend:8080` inside the container | root `.env`: `PUBLIC_API_BASE_URL` |
+| Netlify | `BACKEND_API_URL` | `BACKEND_PUBLIC_URL` |
 
 For production, set `Database__SeedDemoData=false`, use a strong database
 password, and run the backend as one replica while rooms remain in memory.
