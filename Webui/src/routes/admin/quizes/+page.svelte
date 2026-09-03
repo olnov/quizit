@@ -174,9 +174,9 @@
     .page-header h1 { font-size: 3.25rem; line-height: 1; margin: 10px 0 12px; }
     .page-header p:not(.eyebrow) { color: var(--color-muted); margin: 0; }
     .admin-link { color: var(--color-muted); font-size: .82rem; font-weight: 800; text-decoration: none; text-transform: uppercase; }
-    .controls { border-bottom: 1px solid var(--color-border); border-top: 1px solid var(--color-border); display: grid; gap: 16px; grid-template-columns: 2fr repeat(3, minmax(130px, 1fr)); padding: 16px 0; }
-    .controls label { display: grid; font-size: .72rem; font-weight: 800; gap: 6px; letter-spacing: .08em; text-transform: uppercase; }
-    input, select { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-sm); color: var(--color-ink); font: inherit; letter-spacing: 0; min-height: 42px; padding: 0 10px; text-transform: none; }
+    .controls { border-bottom: 1px solid var(--color-border); border-top: 1px solid var(--color-border); display: grid; gap: 16px; grid-template-columns: minmax(0, 2fr) minmax(140px, 1fr) minmax(180px, 1fr) minmax(260px, 1.35fr); padding: 16px 0; }
+    .controls label { min-width: 0; display: grid; font-size: .72rem; font-weight: 800; gap: 6px; letter-spacing: .08em; text-transform: uppercase; }
+    input, select { box-sizing: border-box; min-width: 0; width: 100%; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-sm); color: var(--color-ink); font: inherit; letter-spacing: 0; min-height: 42px; padding: 0 10px; text-transform: none; }
     .import-control input { padding: 8px; }
     .error { color: #a32b1f; margin: 18px 0 0; }
     .import-preview { align-items: center; background: #e2eafc; border: 1px solid var(--color-accent); display: flex; gap: 24px; justify-content: space-between; margin-top: 20px; padding: 18px; }

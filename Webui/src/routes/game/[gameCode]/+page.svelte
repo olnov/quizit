@@ -27,6 +27,7 @@
 	let selectedOptionId = $state<string | null>(null);
 	let message = $state('Connecting to the game...');
 	let now = $state(Date.now());
+	let endGameDialogOpen = $state(false);
 
 	let remainingSeconds = $derived(
 		question?.answerDeadlineAt
@@ -166,15 +167,51 @@
 					<div class="host-controls">
 						{#if room.status === 3}<Button onclick={() => advance('next')}>Next question</Button
 							>{/if}
-						<Button class="end-button" onclick={() => advance('complete')}>End game</Button>
+						<Button class="end-button" onclick={() => (endGameDialogOpen = true)}>End game</Button>
 					</div>
+					<Dialog.Root bind:open={endGameDialogOpen}>
+						<Dialog.Portal>
+							<Dialog.Overlay class="game-dialog-overlay" />
+							<Dialog.Content class="game-dialog" aria-describedby="end-game-description">
+								<div class="explanation-header">
+									<div>
+										<p class="eyebrow">End game</p>
+										<Dialog.Title>Finish this game?</Dialog.Title>
+									</div>
+									<Dialog.Close class="game-dialog-close" aria-label="Close confirmation">
+										&times;
+									</Dialog.Close>
+								</div>
+
+								<Dialog.Description id="end-game-description" class="explanation-text">
+									This ends the game for every player and shows the final results.
+								</Dialog.Description>
+
+								<div class="host-controls">
+									<Dialog.Close class="game-button">Cancel</Dialog.Close>
+									<Button
+										class="end-button"
+										onclick={() => {
+											endGameDialogOpen = false;
+											void advance('complete');
+										}}
+									>
+										End game
+									</Button>
+								</div>
+							</Dialog.Content>
+						</Dialog.Portal>
+					</Dialog.Root>
 				{/if}
 				{#if reveal?.explanation}
 					<Dialog.Root>
 						<Dialog.Trigger class="game-button explanation-button">Show explanation</Dialog.Trigger>
 						<Dialog.Portal>
 							<Dialog.Overlay class="game-dialog-overlay" />
-							<Dialog.Content class="game-dialog explanation-dialog" aria-describedby="explanation-description">
+							<Dialog.Content
+								class="game-dialog explanation-dialog"
+								aria-describedby="explanation-description"
+							>
 								<div class="explanation-header">
 									<div>
 										<p class="eyebrow">Learning note</p>

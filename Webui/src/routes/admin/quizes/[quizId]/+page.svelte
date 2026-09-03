@@ -302,7 +302,7 @@
     .question-topline { align-items: center; display: flex; justify-content: space-between; }
     .delete-question { background: transparent; border: 0; color: #a32b1f; cursor: pointer; font: inherit; font-size: .78rem; font-weight: 800; text-decoration: underline; }
     .question-form label { display: grid; font-size: .875rem; font-weight: 800; gap: 8px; }
-    .question-form label:first-of-type { max-width: 160px; }
+    .question-form > label:first-of-type { max-width: 160px; }
     .code-field { background: var(--color-ink); color: #f7f7f2; font-family: var(--font-mono); font-size: .84rem; line-height: 1.5; }
     fieldset { border: 0; margin: 0; padding: 0; }
     legend { font-size: .875rem; font-weight: 800; margin-bottom: 4px; }
