@@ -12,6 +12,8 @@ public static class QuizMapper
             Title = quiz.Title,
             ThemeId = quiz.ThemeId,
             QuestionsPerGame = quiz.QuestionsPerGame,
+            QuestionCountMode = quiz.QuestionCountMode,
+            QuestionCount = quiz.QuizQuestions.Count,
         };
     }
 

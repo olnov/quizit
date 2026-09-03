@@ -32,6 +32,21 @@ public class GameSessionService
             .Select(link => new { link.QuestionId, link.Question.Difficulty })
             .ToListAsync(cancellationToken);
 
+        if (room.QuestionCountMode == QuestionCountMode.AllQuestions)
+        {
+            if (room.QuestionSelectionMode == QuestionSelectionMode.SpecificDifficulty)
+            {
+                throw new InvalidOperationException(
+                    "A quiz configured to use all questions cannot use a specific difficulty filter.");
+            }
+
+            room.QuestionCount = questionCandidates.Count;
+            if (room.QuestionCount == 0)
+            {
+                throw new InvalidOperationException("The quiz does not contain any questions.");
+            }
+        }
+
         var selectedQuestionIds = room.QuestionSelectionMode switch
         {
             QuestionSelectionMode.AscendingDifficulty => questionCandidates
@@ -97,6 +112,38 @@ public class GameSessionService
         room.GameSessionId = session.Id;
         room.QuestionIds = selectedQuestionIds;
         return session;
+    }
+
+    public async Task<ResolvedQuestionSettings> ResolveQuestionSettingsAsync(
+        Guid quizId,
+        int requestedQuestionCount,
+        QuestionSelectionMode questionSelectionMode,
+        CancellationToken cancellationToken)
+    {
+        var quiz = await _dbContext.Quizes
+            .AsNoTracking()
+            .SingleOrDefaultAsync(current => current.Id == quizId && !current.IsDeleted, cancellationToken)
+            ?? throw new KeyNotFoundException($"Quiz with id '{quizId}' was not found.");
+
+        if (quiz.QuestionCountMode != QuestionCountMode.AllQuestions)
+        {
+            return new ResolvedQuestionSettings(requestedQuestionCount, quiz.QuestionCountMode);
+        }
+
+        if (questionSelectionMode == QuestionSelectionMode.SpecificDifficulty)
+        {
+            throw new InvalidOperationException(
+                "A quiz configured to use all questions cannot use a specific difficulty filter.");
+        }
+
+        var questionCount = await _dbContext.QuizQuestions
+            .CountAsync(link => link.QuizId == quizId, cancellationToken);
+        if (questionCount == 0)
+        {
+            throw new InvalidOperationException("The quiz does not contain any questions.");
+        }
+
+        return new ResolvedQuestionSettings(questionCount, quiz.QuestionCountMode);
     }
 
     public async Task<GameSession?> GetAsync(Guid id, CancellationToken cancellationToken)
@@ -265,3 +312,7 @@ public class GameSessionService
         return difficulty;
     }
 }
+
+public sealed record ResolvedQuestionSettings(
+    int QuestionCount,
+    QuestionCountMode QuestionCountMode);

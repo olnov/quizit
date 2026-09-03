@@ -1,3 +1,5 @@
+using Backend.Features.Quizes;
+
 namespace Backend.Features.GameRooms;
 
 public class GameRoom
@@ -10,6 +12,7 @@ public class GameRoom
     public string HostPlayerId { get; set; } = string.Empty;
     public Guid? GameSessionId { get; set; }
     public int QuestionCount { get; set; }
+    public QuestionCountMode QuestionCountMode { get; set; } = QuestionCountMode.HostSelectable;
     public int? AnswerTimeLimitSeconds { get; set; }
     public QuestionSelectionMode QuestionSelectionMode { get; set; } = QuestionSelectionMode.AscendingDifficulty;
     public int? SpecificDifficulty { get; set; }

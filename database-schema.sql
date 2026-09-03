@@ -53,6 +53,7 @@ CREATE TABLE "Quizes" (
     "Title" text NOT NULL,
     "ThemeId" uuid NOT NULL,
     "QuestionsPerGame" integer NOT NULL,
+    "QuestionCountMode" integer NOT NULL DEFAULT 0,
     "Status" integer NOT NULL DEFAULT 1,
     "CreatedAt" timestamp with time zone NOT NULL,
     "UpdatedAt" timestamp with time zone NOT NULL,
@@ -68,6 +69,8 @@ CREATE INDEX "IX_Quizes_ThemeId" ON "Quizes" ("ThemeId");
 
 COMMENT ON COLUMN "Quizes"."Status" IS
     '0 = Draft, 1 = Published, 2 = Archived.';
+COMMENT ON COLUMN "Quizes"."QuestionCountMode" IS
+    '0 = HostSelectable, 1 = AllQuestions.';
 COMMENT ON COLUMN "Quizes"."IsDeleted" IS
     'Soft-deleted quizzes are not returned by public or authoring lists.';
 

@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Backend.Features.Quizes;
 
 namespace Backend.Features.Quizes.Dtos;
 
@@ -12,4 +13,6 @@ public class CreateQuizRequest
 
     [Range(1, 100)]
     public int QuestionsPerGame { get; set; } = 15;
+
+    public QuestionCountMode QuestionCountMode { get; set; } = QuestionCountMode.HostSelectable;
 }

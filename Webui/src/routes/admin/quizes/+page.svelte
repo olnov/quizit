@@ -159,7 +159,7 @@
                     <div><a class="quiz-title" href={`/admin/quizes/${quiz.id}`}>{quiz.title}</a><small>Updated {new Date(quiz.updatedAt).toLocaleDateString()}</small></div>
                     <span class="theme">{quiz.themeName}</span>
                     <span class:published={quiz.status === 1} class:archived={quiz.status === 2} class="status-badge">{quizStatusLabel[quiz.status]}</span>
-                    <span>{quiz.questionCount} / {quiz.questionsPerGame}</span>
+                    <span>{quiz.questionCountMode === 1 ? `${quiz.questionCount} total` : `${quiz.questionCount} / ${quiz.questionsPerGame}`}</span>
                     <div class="row-actions"><a href={`/admin/quizes/${quiz.id}`}>Edit</a><button type="button" onclick={() => handleExport(quiz)}>Export</button></div>
                 </article>
             {/each}

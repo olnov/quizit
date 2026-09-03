@@ -4,15 +4,19 @@
 	import { onMount } from 'svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import TextField from '$lib/components/ui/TextField.svelte';
-	import { createRoom, createSoloRoom, getQuizzes, saveRoomSession } from '$lib/game-room';
+	import {
+		createRoom,
+		createSoloRoom,
+		getQuizzes,
+		saveRoomSession,
+		type PublicQuiz
+	} from '$lib/game-room';
 	import { generateNickName } from '$lib/name-generator';
 
 	let { solo = false }: { solo?: boolean } = $props();
 
-	type Quiz = { id: string; title: string; questionsPerGame: number };
-
 	let hostName = $state(generateNickName());
-	let quizzes = $state<Quiz[]>([]);
+	let quizzes = $state<PublicQuiz[]>([]);
 	let quizId = $state('');
 	let questionCount = $state(1);
 	let answerTimeLimitSeconds = $state<number | null>(null);
@@ -20,6 +24,8 @@
 	let specificDifficulty = $state(100);
 	let message = $state('');
 	let creating = $state(false);
+	let selectedQuiz = $derived(quizzes.find((quiz) => quiz.id === quizId));
+	let usesAllQuestions = $derived(selectedQuiz?.questionCountMode === 1);
 
 	onMount(async () => {
 		try {
@@ -36,6 +42,22 @@
 					: 'The Quizz API is unavailable. Start the backend, then try again.';
 		}
 	});
+
+	function changeQuiz(event: Event) {
+		quizId = (event.currentTarget as HTMLSelectElement).value;
+		const quiz = quizzes.find((current) => current.id === quizId);
+		if (!quiz) return;
+
+		questionCount = quiz.questionsPerGame;
+		if (quiz.questionCountMode === 1 && questionSelectionMode === 1) {
+			questionSelectionMode = 0;
+		}
+	}
+
+	function changeQuestionSelectionMode(event: Event) {
+		const nextMode = Number((event.currentTarget as HTMLSelectElement).value);
+		questionSelectionMode = usesAllQuestions && nextMode === 1 ? 0 : nextMode;
+	}
 
 	async function create() {
 		if (!hostName.trim()) {
@@ -58,7 +80,7 @@
 				questionCount,
 				answerTimeLimitSeconds,
 				questionSelectionMode,
-				questionSelectionMode === 1 ? specificDifficulty : null
+				!usesAllQuestions && questionSelectionMode === 1 ? specificDifficulty : null
 			);
 			saveRoomSession(response.room.gameCode, {
 				...response.credentials,
@@ -101,7 +123,7 @@
 				<TextField label="Your nickname" placeholder="e.g. BlueFish99" bind:value={hostName} />
 				<label class="select-field">
 					<span>Quiz</span>
-					<select bind:value={quizId} disabled={quizzes.length === 0}>
+					<select value={quizId} onchange={changeQuiz} disabled={quizzes.length === 0}>
 						{#if quizzes.length === 0}
 							<option>No quizzes available</option>
 						{:else}
@@ -111,15 +133,22 @@
 						{/if}
 					</select>
 				</label>
-				<label class="select-field">
-					<span>Questions in this round</span>
-					<input
-						type="number"
-						min="1"
-						max={quizzes.find((quiz) => quiz.id === quizId)?.questionsPerGame ?? 1}
-						bind:value={questionCount}
-					/>
-				</label>
+				{#if usesAllQuestions}
+					<label class="select-field">
+						<span>Questions in this round</span>
+						<output>All questions</output>
+					</label>
+				{:else}
+					<label class="select-field">
+						<span>Questions in this round</span>
+						<input
+							type="number"
+							min="1"
+							max={selectedQuiz?.questionCount ?? 1}
+							bind:value={questionCount}
+						/>
+					</label>
+				{/if}
 				<label class="select-field">
 					<span>Answer time</span>
 					<select
@@ -137,13 +166,13 @@
 				</label>
 				<label class="select-field">
 					<span>Question order</span>
-					<select bind:value={questionSelectionMode}>
+					<select value={questionSelectionMode} onchange={changeQuestionSelectionMode}>
 						<option value={0}>Ascending difficulty</option>
-						<option value={1}>Specific difficulty</option>
+						{#if !usesAllQuestions}<option value={1}>Specific difficulty</option>{/if}
 						<option value={2}>Mixed</option>
 					</select>
 				</label>
-				{#if questionSelectionMode === 1}
+				{#if !usesAllQuestions && questionSelectionMode === 1}
 					<label class="select-field"
 						><span>Difficulty (0-1000)</span><input
 							type="number"
@@ -193,7 +222,8 @@
 		gap: 7px;
 	}
 	select,
-	input {
+	input,
+	output {
 		appearance: none;
 		background: var(--color-surface);
 		border: 1px solid var(--color-border);
@@ -202,6 +232,10 @@
 		font: inherit;
 		min-height: 46px;
 		padding: 0 13px;
+	}
+	output {
+		display: flex;
+		align-items: center;
 	}
 	:global(.submit-button) {
 		margin-top: 4px;

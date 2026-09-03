@@ -3,6 +3,7 @@ import { getAccessToken } from '$lib/auth/oidc';
 const apiBaseUrl = '';
 
 export type QuizStatus = 0 | 1 | 2;
+export type QuestionCountMode = 0 | 1;
 
 export type QuizTheme = {
     id: string;
@@ -16,6 +17,7 @@ export type QuizListItem = {
     themeName: string;
     questionsPerGame: number;
     questionCount: number;
+    questionCountMode: QuestionCountMode;
     status: QuizStatus;
     createdAt: string;
     updatedAt: string;
@@ -37,6 +39,7 @@ export type AdminQuiz = {
     themeId: string;
     themeName: string;
     questionsPerGame: number;
+    questionCountMode: QuestionCountMode;
     status: QuizStatus;
     createdAt: string;
     updatedAt: string;
@@ -54,7 +57,7 @@ export type PagedResult<T> = {
 export type QuizImportDocument = {
     schemaVersion: number;
     theme: string;
-    quiz: { title: string; questionsPerGame: number };
+    quiz: { title: string; questionsPerGame: number; questionCountMode: QuestionCountMode };
     questions: Array<{
         text: string;
         codeContext: string | null;
@@ -72,6 +75,7 @@ export type ImportValidation = {
         theme: string;
         title: string;
         questionsPerGame: number;
+        questionCountMode: QuestionCountMode;
         questionCount: number;
     } | null;
 };
@@ -105,6 +109,7 @@ export async function createAdminQuiz(input: {
     title: string;
     themeId: string;
     questionsPerGame: number;
+    questionCountMode: QuestionCountMode;
 }): Promise<AdminQuiz> {
     return adminRequest('/api/v1/admin/quizes', { method: 'POST', body: JSON.stringify(input) });
 }
@@ -113,6 +118,7 @@ export async function updateAdminQuiz(quizId: string, quiz: {
     title: string;
     themeId: string;
     questionsPerGame: number;
+    questionCountMode: QuestionCountMode;
     questions: Array<Omit<AdminQuestion, 'id'> & { id?: string }>;
 }): Promise<AdminQuiz> {
     return adminRequest(`/api/v1/admin/quizes/${encodeURIComponent(quizId)}`, {

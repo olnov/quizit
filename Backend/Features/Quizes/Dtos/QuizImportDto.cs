@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Backend.Features.Quizes;
 
 namespace Backend.Features.Quizes.Dtos;
 
@@ -25,6 +26,8 @@ public class QuizImportMetadataDto
 
     [Range(1, 100)]
     public int QuestionsPerGame { get; set; }
+
+    public QuestionCountMode QuestionCountMode { get; set; } = QuestionCountMode.HostSelectable;
 }
 
 public class QuizImportQuestionDto
@@ -61,5 +64,6 @@ public class QuizImportPreviewDto
     public string Theme { get; init; } = string.Empty;
     public string Title { get; init; } = string.Empty;
     public int QuestionsPerGame { get; init; }
+    public QuestionCountMode QuestionCountMode { get; init; }
     public int QuestionCount { get; init; }
 }

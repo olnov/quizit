@@ -102,6 +102,8 @@ public class QuizCatalog
     public async Task<IReadOnlyCollection<Quiz>> GetQuizesAsync(CancellationToken cancellationToken)
     {
         return await _dbContext.Quizes
+            .AsNoTracking()
+            .Include(quiz => quiz.QuizQuestions)
             .Where(quiz => !quiz.IsDeleted && quiz.Status == QuizStatus.Published)
             .OrderBy(quiz => quiz.Title)
             .ToListAsync(cancellationToken);
@@ -135,15 +137,21 @@ public class QuizCatalog
         string title,
         Guid themeId,
         int questionsPerGame,
+        QuestionCountMode questionCountMode,
         CancellationToken cancellationToken)
     {
         await EnsureThemeExistsAsync(themeId, cancellationToken);
+        if (!Enum.IsDefined(questionCountMode))
+        {
+            throw new ArgumentException("questionCountMode is not supported.");
+        }
 
         var quiz = new Quiz
         {
             Title = title.Trim(),
             ThemeId = themeId,
             QuestionsPerGame = questionsPerGame,
+            QuestionCountMode = questionCountMode,
         };
 
         _dbContext.Quizes.Add(quiz);

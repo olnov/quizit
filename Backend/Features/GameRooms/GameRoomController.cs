@@ -36,15 +36,23 @@ public class GameRoomController : ControllerBase
     }
 
     [HttpPost(Name = "CreateRoom")]
-    public IActionResult CreateRoom([FromBody] CreateRoomRequest request)
+    public async Task<IActionResult> CreateRoom(
+        [FromBody] CreateRoomRequest request,
+        CancellationToken cancellationToken)
     {
+        var questionSettings = await _gameSessionService.ResolveQuestionSettingsAsync(
+            request.QuizId,
+            request.QuestionCount,
+            request.QuestionSelectionMode,
+            cancellationToken);
         var room = _gameRoomService.CreateGameRoom(
             request.QuizId,
             request.HostName,
-            request.QuestionCount,
+            questionSettings.QuestionCount,
             request.AnswerTimeLimitSeconds,
             request.QuestionSelectionMode,
-            request.SpecificDifficulty);
+            request.SpecificDifficulty,
+            questionSettings.QuestionCountMode);
         var host = room.Players.Single(player => player.PlayerId == room.HostPlayerId);
 
         return Created($"/api/v1/game-rooms/{room.GameCode}", new CreateRoomResponseDto
@@ -59,13 +67,19 @@ public class GameRoomController : ControllerBase
         [FromBody] CreateRoomRequest request,
         CancellationToken cancellationToken)
     {
+        var questionSettings = await _gameSessionService.ResolveQuestionSettingsAsync(
+            request.QuizId,
+            request.QuestionCount,
+            request.QuestionSelectionMode,
+            cancellationToken);
         var room = _gameRoomService.CreateGameRoom(
             request.QuizId,
             request.HostName,
-            request.QuestionCount,
+            questionSettings.QuestionCount,
             request.AnswerTimeLimitSeconds,
             request.QuestionSelectionMode,
             request.SpecificDifficulty,
+            questionSettings.QuestionCountMode,
             isSolo: true);
         var host = room.Players.Single(player => player.PlayerId == room.HostPlayerId);
 
@@ -239,10 +253,17 @@ public class GameRoomController : ControllerBase
         [FromBody] UpdateRoomSettingsRequest request,
         CancellationToken cancellationToken)
     {
+        var currentRoom = _gameRoomService.GetRoom(gameCode)
+            ?? throw new KeyNotFoundException($"Game room with code '{gameCode}' was not found.");
+        var questionSettings = await _gameSessionService.ResolveQuestionSettingsAsync(
+            currentRoom.QuizId,
+            request.QuestionCount,
+            request.QuestionSelectionMode,
+            cancellationToken);
         var room = _gameRoomService.UpdateSettings(
             gameCode,
             request.PlayerToken,
-            request.QuestionCount,
+            questionSettings.QuestionCount,
             request.AnswerTimeLimitSeconds,
             request.QuestionSelectionMode,
             request.SpecificDifficulty);
