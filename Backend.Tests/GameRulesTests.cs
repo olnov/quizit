@@ -66,6 +66,23 @@ public class GameRulesTests
     }
 
     [Fact]
+    public async Task CreateFromRoomAsync_AllQuestionsModeSelectsEveryQuizQuestion()
+    {
+        await using var dbContext = CreateDbContext();
+        var (quiz, questions) = await SeedQuizAsync(dbContext, questionsPerGame: 1, questionCount: 3);
+        quiz.QuestionCountMode = QuestionCountMode.AllQuestions;
+        await dbContext.SaveChangesAsync();
+        var room = CreateRoom(quiz.Id, questionCount: 1);
+        room.QuestionCountMode = QuestionCountMode.AllQuestions;
+
+        var session = await new GameSessionService(dbContext)
+            .CreateFromRoomAsync(room, CancellationToken.None);
+
+        Assert.Equal(questions.Count, session.Questions.Count);
+        Assert.Equal(questions.Count, room.QuestionCount);
+    }
+
+    [Fact]
     public async Task CreateFromRoomAsync_OnlySelectsQuestionsLinkedToRequestedQuiz()
     {
         await using var dbContext = CreateDbContext();

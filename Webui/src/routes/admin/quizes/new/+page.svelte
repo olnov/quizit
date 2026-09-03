@@ -2,13 +2,14 @@
     import { goto } from '$app/navigation';
     import { onMount } from 'svelte';
     import Button from '$lib/components/ui/Button.svelte';
-    import { createAdminQuiz, createQuizTheme, getQuizThemes, type QuizTheme } from '$lib/admin-api';
+    import { createAdminQuiz, createQuizTheme, getQuizThemes, type QuestionCountMode, type QuizTheme } from '$lib/admin-api';
 
     let themes = $state<QuizTheme[]>([]);
     let title = $state('');
     let themeId = $state('');
     let newThemeName = $state('');
     let questionsPerGame = $state(10);
+    let questionCountMode = $state<QuestionCountMode>(0);
     let loading = $state(true);
     let saving = $state(false);
     let creatingTheme = $state(false);
@@ -33,7 +34,7 @@
 
         saving = true;
         try {
-            const quiz = await createAdminQuiz({ title: title.trim(), themeId, questionsPerGame });
+            const quiz = await createAdminQuiz({ title: title.trim(), themeId, questionsPerGame, questionCountMode });
             await goto(`/admin/quizes/${quiz.id}`);
         } catch (exception) {
             error = getErrorMessage(exception);
@@ -115,6 +116,13 @@
         <label>
             <span>Questions per game</span>
             <input bind:value={questionsPerGame} disabled={loading || saving} max="100" min="1" type="number" />
+        </label>
+        <label>
+            <span>Question count mode</span>
+            <select bind:value={questionCountMode} disabled={loading || saving}>
+                <option value={0}>Host chooses number of questions</option>
+                <option value={1}>Use all questions</option>
+            </select>
         </label>
         {#if error}<p class="error" role="alert">{error}</p>{/if}
         <div class="actions"><a href="/admin/quizes">Cancel</a><Button type="submit" disabled={loading || saving || themes.length === 0}>{saving ? 'Creating' : 'Create quiz'}</Button></div>

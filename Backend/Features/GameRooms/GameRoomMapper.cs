@@ -14,6 +14,7 @@ public static class GameRoomMapper
             Status = room.Status,
             LobbyExpiresAt = room.LobbyExpiresAt,
             QuestionCount = room.QuestionCount,
+            QuestionCountMode = room.QuestionCountMode,
             AnswerTimeLimitSeconds = room.AnswerTimeLimitSeconds,
             QuestionSelectionMode = room.QuestionSelectionMode,
             SpecificDifficulty = room.SpecificDifficulty,

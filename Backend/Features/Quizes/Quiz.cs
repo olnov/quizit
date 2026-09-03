@@ -12,4 +12,11 @@ public class Quiz
     public bool IsDeleted { get; set; } = false;
     public DateTime? DeletedAt { get; set; }
     public List<QuizQuestion> QuizQuestions { get; set; } = new();
+    public QuestionCountMode QuestionCountMode { get; set; } = QuestionCountMode.HostSelectable;
+}
+
+public enum QuestionCountMode
+{
+    HostSelectable = 0,
+    AllQuestions = 1,
 }

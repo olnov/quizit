@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Backend.Features.Quizes;
 
 namespace Backend.Features.Quizes.Dtos;
 
@@ -12,6 +13,9 @@ public class UpdateQuizRequest
 
     [Range(1, 100)]
     public int QuestionsPerGame { get; set; }
+
+    [Required]
+    public QuestionCountMode QuestionCountMode { get; set; }
 
     [Required]
     public List<UpdateQuestionRequest> Questions { get; set; } = new();

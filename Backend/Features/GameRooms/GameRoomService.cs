@@ -1,6 +1,7 @@
 
 using System.Collections.Concurrent;
 using Backend.Features.GameRooms.Dtos;
+using Backend.Features.Quizes;
 
 namespace Backend.Features.GameRooms;
 
@@ -15,6 +16,7 @@ public class GameRoomService
         int? answerTimeLimitSeconds,
         QuestionSelectionMode questionSelectionMode,
         int? specificDifficulty,
+        QuestionCountMode questionCountMode = QuestionCountMode.HostSelectable,
         bool isSolo = false)
     {
         ValidateQuestionSelection(questionSelectionMode, specificDifficulty);
@@ -31,6 +33,7 @@ public class GameRoomService
             HostPlayerId = hostPlayer.PlayerId,
             Players = new List<PlayerState> { hostPlayer },
             QuestionCount = questionCount,
+            QuestionCountMode = questionCountMode,
             AnswerTimeLimitSeconds = answerTimeLimitSeconds,
             QuestionSelectionMode = questionSelectionMode,
             SpecificDifficulty = specificDifficulty,

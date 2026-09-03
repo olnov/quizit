@@ -34,6 +34,7 @@ public class QuizDesigner(AppDbContext dbContext)
                     .Select(theme => theme.Name)
                     .FirstOrDefault() ?? string.Empty,
                 QuestionsPerGame = quiz.QuestionsPerGame,
+                QuestionCountMode = quiz.QuestionCountMode,
                 QuestionCount = dbContext.QuizQuestions.Count(link => link.QuizId == quiz.Id),
                 Status = quiz.Status,
                 CreatedAt = quiz.CreatedAt,
@@ -60,7 +61,7 @@ public class QuizDesigner(AppDbContext dbContext)
         CreateQuizRequest request,
         CancellationToken cancellationToken)
     {
-        ValidateQuizMetadata(request.Title, request.QuestionsPerGame);
+        ValidateQuizMetadata(request.Title, request.QuestionsPerGame, request.QuestionCountMode);
         await EnsureThemeExistsAsync(request.ThemeId, cancellationToken);
 
         var quiz = new Quiz
@@ -68,6 +69,7 @@ public class QuizDesigner(AppDbContext dbContext)
             Title = request.Title.Trim(),
             ThemeId = request.ThemeId,
             QuestionsPerGame = request.QuestionsPerGame,
+            QuestionCountMode = request.QuestionCountMode,
             Status = QuizStatus.Draft,
         };
 
@@ -81,7 +83,7 @@ public class QuizDesigner(AppDbContext dbContext)
         UpdateQuizRequest request,
         CancellationToken cancellationToken)
     {
-        ValidateQuizMetadata(request.Title, request.QuestionsPerGame);
+        ValidateQuizMetadata(request.Title, request.QuestionsPerGame, request.QuestionCountMode);
         await EnsureThemeExistsAsync(request.ThemeId, cancellationToken);
         ValidateQuestions(request.Questions);
 
@@ -157,6 +159,7 @@ public class QuizDesigner(AppDbContext dbContext)
         quiz.Title = request.Title.Trim();
         quiz.ThemeId = request.ThemeId;
         quiz.QuestionsPerGame = request.QuestionsPerGame;
+        quiz.QuestionCountMode = request.QuestionCountMode;
         quiz.UpdatedAt = DateTime.UtcNow;
 
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -169,7 +172,10 @@ public class QuizDesigner(AppDbContext dbContext)
         var questionCount = await dbContext.QuizQuestions
             .CountAsync(link => link.QuizId == quiz.Id, cancellationToken);
 
-        if (questionCount < quiz.QuestionsPerGame)
+        var minimumQuestionCount = quiz.QuestionCountMode == QuestionCountMode.AllQuestions
+            ? 1
+            : quiz.QuestionsPerGame;
+        if (questionCount < minimumQuestionCount)
         {
             throw new InvalidOperationException(
                 "A quiz cannot be published until it has enough questions for one game.");
@@ -219,6 +225,7 @@ public class QuizDesigner(AppDbContext dbContext)
             {
                 Title = quiz.Title,
                 QuestionsPerGame = quiz.QuestionsPerGame,
+                QuestionCountMode = quiz.QuestionCountMode,
             },
             Questions = quiz.Questions.Select(question => new QuizImportQuestionDto
             {
@@ -256,6 +263,11 @@ public class QuizDesigner(AppDbContext dbContext)
             errors.Add("questionsPerGame must be between 1 and 100.");
         }
 
+        if (document.Quiz is not null && !Enum.IsDefined(document.Quiz.QuestionCountMode))
+        {
+            errors.Add("questionCountMode is not supported.");
+        }
+
         for (var index = 0; index < document.Questions.Count; index++)
         {
             try
@@ -268,7 +280,9 @@ public class QuizDesigner(AppDbContext dbContext)
             }
         }
 
-        if (document.Quiz is not null && document.Questions.Count < document.Quiz.QuestionsPerGame)
+        if (document.Quiz is not null
+            && document.Quiz.QuestionCountMode == QuestionCountMode.HostSelectable
+            && document.Questions.Count < document.Quiz.QuestionsPerGame)
         {
             errors.Add("The document does not contain enough questions for one game.");
         }
@@ -283,6 +297,7 @@ public class QuizDesigner(AppDbContext dbContext)
                     Theme = document.Theme.Trim(),
                     Title = document.Quiz.Title.Trim(),
                     QuestionsPerGame = document.Quiz.QuestionsPerGame,
+                    QuestionCountMode = document.Quiz.QuestionCountMode,
                     QuestionCount = document.Questions.Count,
                 }
                 : null,
@@ -314,6 +329,7 @@ public class QuizDesigner(AppDbContext dbContext)
             Title = document.Quiz.Title.Trim(),
             ThemeId = theme.Id,
             QuestionsPerGame = document.Quiz.QuestionsPerGame,
+            QuestionCountMode = document.Quiz.QuestionCountMode,
             Status = QuizStatus.Draft,
         };
 
@@ -426,6 +442,7 @@ public class QuizDesigner(AppDbContext dbContext)
             ThemeId = quiz.ThemeId,
             ThemeName = theme.Name,
             QuestionsPerGame = quiz.QuestionsPerGame,
+            QuestionCountMode = quiz.QuestionCountMode,
             Status = quiz.Status,
             CreatedAt = quiz.CreatedAt,
             UpdatedAt = quiz.UpdatedAt,
@@ -570,7 +587,10 @@ public class QuizDesigner(AppDbContext dbContext)
         question.CorrectOptionId = options[correctOptionIndex].Id;
     }
 
-    private static void ValidateQuizMetadata(string title, int questionsPerGame)
+    private static void ValidateQuizMetadata(
+        string title,
+        int questionsPerGame,
+        QuestionCountMode questionCountMode)
     {
         if (string.IsNullOrWhiteSpace(title))
         {
@@ -580,6 +600,11 @@ public class QuizDesigner(AppDbContext dbContext)
         if (questionsPerGame is < 1 or > 100)
         {
             throw new ArgumentException("questionsPerGame must be between 1 and 100.");
+        }
+
+        if (!Enum.IsDefined(questionCountMode))
+        {
+            throw new ArgumentException("questionCountMode is not supported.");
         }
     }
 

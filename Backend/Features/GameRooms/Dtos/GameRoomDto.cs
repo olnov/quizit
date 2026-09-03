@@ -1,5 +1,7 @@
 namespace Backend.Features.GameRooms.Dtos;
 
+using Backend.Features.Quizes;
+
 public class GameRoomDto
 {
     public string GameCode { get; set; } = string.Empty;
@@ -8,6 +10,7 @@ public class GameRoomDto
     public GameStatus Status { get; set; }
     public DateTime LobbyExpiresAt { get; set; }
     public int QuestionCount { get; set; }
+    public QuestionCountMode QuestionCountMode { get; set; }
     public int? AnswerTimeLimitSeconds { get; set; }
     public QuestionSelectionMode QuestionSelectionMode { get; set; }
     public int? SpecificDifficulty { get; set; }
