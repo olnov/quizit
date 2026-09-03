@@ -54,6 +54,12 @@ export type PagedResult<T> = {
     totalPages: number;
 };
 
+export type QuizListFilters = {
+    search?: string;
+    status?: QuizStatus;
+    themeId?: string;
+};
+
 export type QuizImportDocument = {
     schemaVersion: number;
     theme: string;
@@ -86,8 +92,17 @@ export const quizStatusLabel: Record<QuizStatus, string> = {
     2: 'Archived'
 };
 
-export async function getAdminQuizzes(page = 1, pageSize = 100): Promise<PagedResult<QuizListItem>> {
-    return adminRequest(`/api/v1/admin/quizes?page=${page}&pageSize=${pageSize}`);
+export async function getAdminQuizzes(
+    page = 1,
+    pageSize = 20,
+    filters: QuizListFilters = {}
+): Promise<PagedResult<QuizListItem>> {
+    const query = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+    if (filters.search) query.set('search', filters.search);
+    if (filters.status !== undefined) query.set('status', String(filters.status));
+    if (filters.themeId) query.set('themeId', filters.themeId);
+
+    return adminRequest(`/api/v1/admin/quizes?${query}`);
 }
 
 export async function getAdminQuiz(quizId: string): Promise<AdminQuiz> {

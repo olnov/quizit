@@ -14,9 +14,18 @@ public class QuizDesignerController(QuizDesigner quizDesigner) : ControllerBase
     public async Task<ActionResult<PagedResult<QuizListItemDto>>> GetQuizes(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 10,
+        [FromQuery] string? search = null,
+        [FromQuery] QuizStatus? status = null,
+        [FromQuery] Guid? themeId = null,
         CancellationToken cancellationToken = default)
     {
-        var result = await quizDesigner.GetQuizesAsync(page, pageSize, cancellationToken);
+        var result = await quizDesigner.GetQuizesAsync(
+            page,
+            pageSize,
+            search,
+            status,
+            themeId,
+            cancellationToken);
         return Ok(result);
     }
 

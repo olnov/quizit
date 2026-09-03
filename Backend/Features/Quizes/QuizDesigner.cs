@@ -9,14 +9,38 @@ public class QuizDesigner(AppDbContext dbContext)
     public async Task<PagedResult<QuizListItemDto>> GetQuizesAsync(
         int page = 1,
         int pageSize = 10,
+        string? search = null,
+        QuizStatus? status = null,
+        Guid? themeId = null,
         CancellationToken cancellationToken = default)
     {
         page = Math.Max(page, 1);
         pageSize = Math.Clamp(pageSize, 1, 100);
 
-        var query = dbContext.Quizes
+        IQueryable<Quiz> query = dbContext.Quizes
             .AsNoTracking()
-            .Where(quiz => !quiz.IsDeleted)
+            .Where(quiz => !quiz.IsDeleted);
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var normalizedSearch = search.Trim().ToUpper();
+            query = query.Where(quiz =>
+                quiz.Title.ToUpper().Contains(normalizedSearch)
+                || dbContext.QuizThemes.Any(theme =>
+                    theme.Id == quiz.ThemeId && theme.Name.ToUpper().Contains(normalizedSearch)));
+        }
+
+        if (status.HasValue)
+        {
+            query = query.Where(quiz => quiz.Status == status.Value);
+        }
+
+        if (themeId.HasValue)
+        {
+            query = query.Where(quiz => quiz.ThemeId == themeId.Value);
+        }
+
+        query = query
             .OrderBy(quiz => quiz.Title)
             .ThenBy(quiz => quiz.Id);
 
