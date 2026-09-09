@@ -153,6 +153,37 @@ public class GameRoomController : ControllerBase
         return Ok(await _gameSessionService.GetCurrentQuestionAsync(room, cancellationToken));
     }
 
+    [HttpGet("{gameCode}/state")]
+    public async Task<ActionResult<GameStateDto>> GetGameState(
+        string gameCode,
+        string playerToken,
+        CancellationToken cancellationToken
+        )
+    {
+        var room = _gameRoomService.GetRoom(gameCode)
+            ?? throw new KeyNotFoundException($"Game room with code '{gameCode}' was not found.");
+
+        var state = new GameStateDto
+        {
+            Room = GameRoomMapper.ToDto(room),
+            SelectedOptionId = room.CurrentAnswers.TryGetValue(player.PlayerId, out var answer)
+                ? answer.AnswerOptionId
+                : null
+        };
+
+        if (room.Status is GameStatus.QuestionActive or GameStatus.QuestionReveal)
+        {
+            state.Question = await _gameSessionService.GetCurrentQuestionAsync(room, cancellationToken);
+        }
+
+        if (room.Status == GameStatus.QuestionReveal)
+        {
+            state.Reveal = await _gameSessionService.GetRevealAsync(room, cancellationToken);
+        }
+
+        return Ok(state);
+    }
+
     [HttpPost("{gameCode}/answers")]
     public async Task<IActionResult> SubmitAnswer(
         string gameCode,

@@ -7,7 +7,7 @@
 	import {
 		completeGame,
 		connectToRoom,
-		getCurrentQuestion,
+		getGameState,
 		getRoomSession,
 		nextQuestion,
 		saveGameResult,
@@ -82,7 +82,11 @@
 			.then(async (startedConnection) => {
 				connection = startedConnection;
 				try {
-					question = await getCurrentQuestion(params.gameCode);
+					const gameState = await getGameState(params.gameCode, savedSession.playerToken);
+					room = gameState.room;
+					question = gameState.question;
+					reveal = gameState.reveal;
+					selectedOptionId = gameState.selectedOptionId;
 				} catch {
 					/* The game can be between questions. */
 				}
