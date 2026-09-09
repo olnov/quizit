@@ -3,6 +3,13 @@ import { HubConnectionBuilder, LogLevel, type HubConnection } from '@microsoft/s
 const apiBaseUrl = '';
 let backendPublicUrl: Promise<string> | undefined;
 
+export type GameState = {
+	room: GameRoom;
+	question: CurrentQuestion | null;
+	reveal: Reveal | null;
+	selectedOptionId: string | null;
+}
+
 export type RoomPlayer = {
 	playerId: string;
 	name: string;
@@ -180,6 +187,13 @@ export async function restartRound(gameCode: string, playerToken: string): Promi
 export async function getCurrentQuestion(gameCode: string): Promise<CurrentQuestion> {
 	return request<CurrentQuestion>(
 		`/api/v1/game-rooms/${encodeURIComponent(gameCode)}/questions/current`,
+		{ method: 'GET' }
+	);
+}
+
+export async function getGameState(gameCode: string, playerToken: string): Promise<GameState> {
+	return request<GameState>(
+		`/api/v1/game-rooms/${encodeURIComponent(gameCode)}/state?playerToken=${encodeURIComponent(playerToken)}`,
 		{ method: 'GET' }
 	);
 }
