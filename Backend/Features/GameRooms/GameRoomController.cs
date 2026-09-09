@@ -161,8 +161,7 @@ public class GameRoomController : ControllerBase
         )
     {
         var room = _gameRoomService.GetRoom(gameCode)
-            ?? throw new KeyNotFoundException($"Game room with code '{gameCode} was not found.");
-        var player = _gameRoomService.GetPlayer(gameCode, playerToken);
+            ?? throw new KeyNotFoundException($"Game room with code '{gameCode}' was not found.");
 
         var state = new GameStateDto
         {
