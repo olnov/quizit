@@ -127,7 +127,10 @@ public class GameSessionService
 
         if (quiz.QuestionCountMode != QuestionCountMode.AllQuestions)
         {
-            return new ResolvedQuestionSettings(requestedQuestionCount, quiz.QuestionCountMode);
+            return new ResolvedQuestionSettings(
+                requestedQuestionCount,
+                quiz.QuestionCountMode,
+                quiz.GameMode);
         }
 
         if (questionSelectionMode == QuestionSelectionMode.SpecificDifficulty)
@@ -143,7 +146,7 @@ public class GameSessionService
             throw new InvalidOperationException("The quiz does not contain any questions.");
         }
 
-        return new ResolvedQuestionSettings(questionCount, quiz.QuestionCountMode);
+        return new ResolvedQuestionSettings(questionCount, quiz.QuestionCountMode, quiz.GameMode);
     }
 
     public async Task<GameSession?> GetAsync(Guid id, CancellationToken cancellationToken)
@@ -315,4 +318,5 @@ public class GameSessionService
 
 public sealed record ResolvedQuestionSettings(
     int QuestionCount,
-    QuestionCountMode QuestionCountMode);
+    QuestionCountMode QuestionCountMode,
+    GameMode GameMode);

@@ -34,6 +34,7 @@ public class QuizesController : ControllerBase
             request.ThemeId,
             request.QuestionsPerGame,
             request.QuestionCountMode,
+            request.GameMode,
             cancellationToken);
         return Created($"/api/v1/quizes/{quiz.Id}", QuizMapper.ToDto(quiz));
     }

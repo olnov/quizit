@@ -17,9 +17,14 @@ public class GameRoomService
         QuestionSelectionMode questionSelectionMode,
         int? specificDifficulty,
         QuestionCountMode questionCountMode = QuestionCountMode.HostSelectable,
+        GameMode gameMode = GameMode.Competition,
         bool isSolo = false)
     {
         ValidateQuestionSelection(questionSelectionMode, specificDifficulty);
+        if (!Enum.IsDefined(gameMode))
+        {
+            throw new ArgumentOutOfRangeException(nameof(gameMode));
+        }
         var hostPlayer = new PlayerState
         {
             Name = hostName,
@@ -34,7 +39,8 @@ public class GameRoomService
             Players = new List<PlayerState> { hostPlayer },
             QuestionCount = questionCount,
             QuestionCountMode = questionCountMode,
-            AnswerTimeLimitSeconds = answerTimeLimitSeconds,
+            GameMode = gameMode,
+            AnswerTimeLimitSeconds = gameMode == GameMode.Study ? null : answerTimeLimitSeconds,
             QuestionSelectionMode = questionSelectionMode,
             SpecificDifficulty = specificDifficulty,
         };
@@ -122,6 +128,11 @@ public class GameRoomService
             return existingPlayer;
         }
 
+        if (room.GameMode == GameMode.Study)
+        {
+            throw new InvalidOperationException("Study games can only be played solo.");
+        }
+
         if (room.Status != GameStatus.Waiting)
         {
             throw new InvalidOperationException("Players cannot join after the game has started.");
@@ -193,7 +204,7 @@ public class GameRoomService
         }
 
         room.QuestionCount = questionCount;
-        room.AnswerTimeLimitSeconds = answerTimeLimitSeconds;
+        room.AnswerTimeLimitSeconds = room.GameMode == GameMode.Study ? null : answerTimeLimitSeconds;
         room.QuestionSelectionMode = questionSelectionMode;
         room.SpecificDifficulty = specificDifficulty;
         return room;

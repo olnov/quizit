@@ -13,6 +13,7 @@ public class GameRoom
     public Guid? GameSessionId { get; set; }
     public int QuestionCount { get; set; }
     public QuestionCountMode QuestionCountMode { get; set; } = QuestionCountMode.HostSelectable;
+    public GameMode GameMode { get; set; } = GameMode.Competition;
     public int? AnswerTimeLimitSeconds { get; set; }
     public QuestionSelectionMode QuestionSelectionMode { get; set; } = QuestionSelectionMode.AscendingDifficulty;
     public int? SpecificDifficulty { get; set; }

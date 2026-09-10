@@ -14,6 +14,7 @@ public static class QuizMapper
             QuestionsPerGame = quiz.QuestionsPerGame,
             QuestionCountMode = quiz.QuestionCountMode,
             QuestionCount = quiz.QuizQuestions.Count,
+            GameMode = quiz.GameMode,
         };
     }
 

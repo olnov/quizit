@@ -59,6 +59,7 @@ public class QuizDesigner(AppDbContext dbContext)
                     .FirstOrDefault() ?? string.Empty,
                 QuestionsPerGame = quiz.QuestionsPerGame,
                 QuestionCountMode = quiz.QuestionCountMode,
+                GameMode = quiz.GameMode,
                 QuestionCount = dbContext.QuizQuestions.Count(link => link.QuizId == quiz.Id),
                 Status = quiz.Status,
                 CreatedAt = quiz.CreatedAt,
@@ -85,7 +86,11 @@ public class QuizDesigner(AppDbContext dbContext)
         CreateQuizRequest request,
         CancellationToken cancellationToken)
     {
-        ValidateQuizMetadata(request.Title, request.QuestionsPerGame, request.QuestionCountMode);
+        ValidateQuizMetadata(
+            request.Title,
+            request.QuestionsPerGame,
+            request.QuestionCountMode,
+            request.GameMode);
         await EnsureThemeExistsAsync(request.ThemeId, cancellationToken);
 
         var quiz = new Quiz
@@ -95,6 +100,7 @@ public class QuizDesigner(AppDbContext dbContext)
             QuestionsPerGame = request.QuestionsPerGame,
             QuestionCountMode = request.QuestionCountMode,
             Status = QuizStatus.Draft,
+            GameMode = request.GameMode,
         };
 
         dbContext.Quizes.Add(quiz);
@@ -107,7 +113,11 @@ public class QuizDesigner(AppDbContext dbContext)
         UpdateQuizRequest request,
         CancellationToken cancellationToken)
     {
-        ValidateQuizMetadata(request.Title, request.QuestionsPerGame, request.QuestionCountMode);
+        ValidateQuizMetadata(
+            request.Title,
+            request.QuestionsPerGame,
+            request.QuestionCountMode,
+            request.GameMode);
         await EnsureThemeExistsAsync(request.ThemeId, cancellationToken);
         ValidateQuestions(request.Questions);
 
@@ -184,6 +194,7 @@ public class QuizDesigner(AppDbContext dbContext)
         quiz.ThemeId = request.ThemeId;
         quiz.QuestionsPerGame = request.QuestionsPerGame;
         quiz.QuestionCountMode = request.QuestionCountMode;
+        quiz.GameMode = request.GameMode;
         quiz.UpdatedAt = DateTime.UtcNow;
 
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -250,6 +261,7 @@ public class QuizDesigner(AppDbContext dbContext)
                 Title = quiz.Title,
                 QuestionsPerGame = quiz.QuestionsPerGame,
                 QuestionCountMode = quiz.QuestionCountMode,
+                GameMode = quiz.GameMode,
             },
             Questions = quiz.Questions.Select(question => new QuizImportQuestionDto
             {
@@ -292,6 +304,11 @@ public class QuizDesigner(AppDbContext dbContext)
             errors.Add("questionCountMode is not supported.");
         }
 
+        if (document.Quiz is not null && !Enum.IsDefined(document.Quiz.GameMode))
+        {
+            errors.Add("gameMode is not supported.");
+        }
+
         for (var index = 0; index < document.Questions.Count; index++)
         {
             try
@@ -322,6 +339,7 @@ public class QuizDesigner(AppDbContext dbContext)
                     Title = document.Quiz.Title.Trim(),
                     QuestionsPerGame = document.Quiz.QuestionsPerGame,
                     QuestionCountMode = document.Quiz.QuestionCountMode,
+                    GameMode = document.Quiz.GameMode,
                     QuestionCount = document.Questions.Count,
                 }
                 : null,
@@ -354,6 +372,7 @@ public class QuizDesigner(AppDbContext dbContext)
             ThemeId = theme.Id,
             QuestionsPerGame = document.Quiz.QuestionsPerGame,
             QuestionCountMode = document.Quiz.QuestionCountMode,
+            GameMode = document.Quiz.GameMode,
             Status = QuizStatus.Draft,
         };
 
@@ -467,6 +486,7 @@ public class QuizDesigner(AppDbContext dbContext)
             ThemeName = theme.Name,
             QuestionsPerGame = quiz.QuestionsPerGame,
             QuestionCountMode = quiz.QuestionCountMode,
+            GameMode = quiz.GameMode,
             Status = quiz.Status,
             CreatedAt = quiz.CreatedAt,
             UpdatedAt = quiz.UpdatedAt,
@@ -614,7 +634,8 @@ public class QuizDesigner(AppDbContext dbContext)
     private static void ValidateQuizMetadata(
         string title,
         int questionsPerGame,
-        QuestionCountMode questionCountMode)
+        QuestionCountMode questionCountMode,
+        GameMode gameMode)
     {
         if (string.IsNullOrWhiteSpace(title))
         {
@@ -629,6 +650,11 @@ public class QuizDesigner(AppDbContext dbContext)
         if (!Enum.IsDefined(questionCountMode))
         {
             throw new ArgumentException("questionCountMode is not supported.");
+        }
+
+        if (!Enum.IsDefined(gameMode))
+        {
+            throw new ArgumentException("gameMode is not supported.");
         }
     }
 

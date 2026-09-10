@@ -13,10 +13,17 @@ public class Quiz
     public DateTime? DeletedAt { get; set; }
     public List<QuizQuestion> QuizQuestions { get; set; } = new();
     public QuestionCountMode QuestionCountMode { get; set; } = QuestionCountMode.HostSelectable;
+    public GameMode GameMode { get; set; } = GameMode.Competition;
 }
 
 public enum QuestionCountMode
 {
     HostSelectable = 0,
     AllQuestions = 1,
+}
+
+public enum GameMode
+{
+    Competition = 0,
+    Study = 1,
 }

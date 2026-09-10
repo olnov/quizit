@@ -19,6 +19,9 @@ public class UpdateQuizRequest
 
     [Required]
     public List<UpdateQuestionRequest> Questions { get; set; } = new();
+
+    [Required]
+    public GameMode GameMode { get; set; } = GameMode.Competition;
 }
 
 public class UpdateQuestionRequest

@@ -28,6 +28,8 @@ public class QuizImportMetadataDto
     public int QuestionsPerGame { get; set; }
 
     public QuestionCountMode QuestionCountMode { get; set; } = QuestionCountMode.HostSelectable;
+
+    public GameMode GameMode { get; set; } = GameMode.Competition;
 }
 
 public class QuizImportQuestionDto
@@ -66,4 +68,5 @@ public class QuizImportPreviewDto
     public int QuestionsPerGame { get; init; }
     public QuestionCountMode QuestionCountMode { get; init; }
     public int QuestionCount { get; init; }
+    public GameMode GameMode { get; init; }
 }

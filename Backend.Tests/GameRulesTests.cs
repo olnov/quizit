@@ -2,6 +2,7 @@ using Backend.Data;
 using Backend.Features.GameRooms;
 using Backend.Features.GameSessions;
 using Backend.Features.Quizes;
+using Backend.Features.Quizes.Dtos;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 
@@ -154,6 +155,82 @@ public class GameRulesTests
 
         service.NextQuestion(room.GameCode, hostToken);
         Assert.Equal(GameStatus.Completed, room.Status);
+    }
+
+    [Fact]
+    public async Task CreateQuizAsync_PersistsRequestedGameMode()
+    {
+        await using var dbContext = CreateDbContext();
+        var theme = new QuizTheme { Name = "Science" };
+        dbContext.QuizThemes.Add(theme);
+        await dbContext.SaveChangesAsync();
+
+        var quiz = await new QuizCatalog(dbContext).CreateQuizAsync(
+            "Study quiz",
+            theme.Id,
+            1,
+            QuestionCountMode.HostSelectable,
+            GameMode.Study,
+            CancellationToken.None);
+
+        Assert.Equal(GameMode.Study, quiz.GameMode);
+    }
+
+    [Fact]
+    public async Task QuizDesigner_CreateQuizAsync_RejectsUnsupportedGameMode()
+    {
+        await using var dbContext = CreateDbContext();
+        var theme = new QuizTheme { Name = "Science" };
+        dbContext.QuizThemes.Add(theme);
+        await dbContext.SaveChangesAsync();
+
+        var request = new CreateQuizRequest
+        {
+            Title = "Invalid mode quiz",
+            ThemeId = theme.Id,
+            QuestionsPerGame = 1,
+            GameMode = (GameMode)99,
+        };
+
+        await Assert.ThrowsAsync<ArgumentException>(() => new QuizDesigner(dbContext)
+            .CreateQuizAsync(request, CancellationToken.None));
+    }
+
+    [Fact]
+    public void CreateGameRoom_StudyModeDisablesAnswerTimer()
+    {
+        var service = new GameRoomService();
+
+        var room = service.CreateGameRoom(
+            Guid.NewGuid(),
+            "Student",
+            1,
+            30,
+            QuestionSelectionMode.AscendingDifficulty,
+            null,
+            QuestionCountMode.HostSelectable,
+            GameMode.Study,
+            isSolo: true);
+
+        Assert.Equal(GameMode.Study, room.GameMode);
+        Assert.Null(room.AnswerTimeLimitSeconds);
+
+        var host = room.Players.Single();
+        var reconnectedHost = service.JoinPlayer(
+            room.GameCode,
+            host.Name,
+            host.PlayerToken,
+            "host-reconnected");
+
+        Assert.Same(host, reconnectedHost);
+
+        var exception = Assert.Throws<InvalidOperationException>(() => service.JoinPlayer(
+            room.GameCode,
+            "Another student",
+            null,
+            "second-connection"));
+
+        Assert.Equal("Study games can only be played solo.", exception.Message);
     }
 
     private static AppDbContext CreateDbContext()

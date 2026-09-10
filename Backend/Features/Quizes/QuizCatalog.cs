@@ -138,6 +138,7 @@ public class QuizCatalog
         Guid themeId,
         int questionsPerGame,
         QuestionCountMode questionCountMode,
+        GameMode gameMode,
         CancellationToken cancellationToken)
     {
         await EnsureThemeExistsAsync(themeId, cancellationToken);
@@ -146,12 +147,18 @@ public class QuizCatalog
             throw new ArgumentException("questionCountMode is not supported.");
         }
 
+        if (!Enum.IsDefined(gameMode))
+        {
+            throw new ArgumentException("gameMode is not supported.");
+        }
+
         var quiz = new Quiz
         {
             Title = title.Trim(),
             ThemeId = themeId,
             QuestionsPerGame = questionsPerGame,
             QuestionCountMode = questionCountMode,
+            GameMode = gameMode,
         };
 
         _dbContext.Quizes.Add(quiz);

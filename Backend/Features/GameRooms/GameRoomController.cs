@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Backend.Features.GameRooms.Dtos;
 using Backend.Features.GameSessions;
+using Backend.Features.Quizes;
 using Backend.Hubs;
 using Microsoft.AspNetCore.SignalR;
 
@@ -45,6 +46,10 @@ public class GameRoomController : ControllerBase
             request.QuestionCount,
             request.QuestionSelectionMode,
             cancellationToken);
+        if (questionSettings.GameMode != GameMode.Competition)
+        {
+            return BadRequest("Study quizzes must be started in solo mode.");
+        }
         var room = _gameRoomService.CreateGameRoom(
             request.QuizId,
             request.HostName,
@@ -52,7 +57,8 @@ public class GameRoomController : ControllerBase
             request.AnswerTimeLimitSeconds,
             request.QuestionSelectionMode,
             request.SpecificDifficulty,
-            questionSettings.QuestionCountMode);
+            questionSettings.QuestionCountMode,
+            questionSettings.GameMode);
         var host = room.Players.Single(player => player.PlayerId == room.HostPlayerId);
 
         return Created($"/api/v1/game-rooms/{room.GameCode}", new CreateRoomResponseDto
@@ -72,6 +78,10 @@ public class GameRoomController : ControllerBase
             request.QuestionCount,
             request.QuestionSelectionMode,
             cancellationToken);
+        if (questionSettings.GameMode != GameMode.Study)
+        {
+            return BadRequest("Competition quizzes must be started in a multiplayer room.");
+        }
         var room = _gameRoomService.CreateGameRoom(
             request.QuizId,
             request.HostName,
@@ -80,6 +90,7 @@ public class GameRoomController : ControllerBase
             request.QuestionSelectionMode,
             request.SpecificDifficulty,
             questionSettings.QuestionCountMode,
+            questionSettings.GameMode,
             isSolo: true);
         var host = room.Players.Single(player => player.PlayerId == room.HostPlayerId);
 
