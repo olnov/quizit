@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
+	import PlayerList from '$lib/components/PlayerList.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import {
 		connectToRoom,
@@ -242,17 +243,13 @@
 					</div>
 					<span class="live-indicator">Live</span>
 				</div>
-				<ul class="player-list">
-					{#each room.players as player}
-						<li>
-							<span class:offline={!player.isConnected} class="player-status" aria-hidden="true"
-							></span>
-							<span>{player.name}</span>
-							{#if session?.isHost && player.playerId === session.playerId}<small>Host</small>{/if}
-							{#if !player.isConnected}<small>Disconnected</small>{/if}
-						</li>
-					{/each}
-				</ul>
+				<PlayerList
+					players={room.players}
+					getStatus={(player) => {
+						if (!player.isConnected) return 'Disconnected';
+						return session?.isHost && player.playerId === session.playerId ? 'Host' : undefined;
+					}}
+				/>
 			</aside>
 		</section>
 	{:else}
@@ -262,17 +259,23 @@
 
 <style>
 	.lobby-shell {
+		box-sizing: border-box;
+		display: flex;
+		flex-direction: column;
+		height: 100dvh;
 		margin: 0 auto;
 		max-width: 1240px;
-		min-height: 100vh;
-		padding: 34px 48px 48px;
+		min-height: 0;
+		padding: 24px 48px 32px;
 	}
 	.lobby-grid {
 		align-items: stretch;
 		display: grid;
+		flex: 1 1 auto;
 		gap: 72px;
 		grid-template-columns: minmax(0, 1fr) minmax(340px, 0.7fr);
-		padding-top: 94px;
+		min-height: 0;
+		padding-top: clamp(40px, 5vh, 72px);
 	}
 	.lobby-main {
 		align-self: center;
@@ -286,7 +289,7 @@
 	h1 {
 		font-size: clamp(3.2rem, 6vw, 6rem);
 		line-height: 0.94;
-		margin: 17px 0 42px;
+		margin: 17px 0 clamp(28px, 3vh, 42px);
 	}
 	.room-code-label {
 		color: var(--color-muted);
@@ -310,7 +313,7 @@
 		background: #e4e6ef;
 		display: flex;
 		gap: 14px;
-		margin-top: 36px;
+		margin-top: clamp(24px, 3vh, 36px);
 		padding: 14px 16px;
 		width: fit-content;
 	}
@@ -331,14 +334,14 @@
 	.host-note {
 		color: var(--color-muted);
 		line-height: 1.55;
-		margin: 25px 0 18px;
+		margin: clamp(16px, 2vh, 25px) 0 clamp(12px, 1.5vh, 18px);
 		max-width: 440px;
 	}
 	.round-settings {
 		display: flex;
 		flex-wrap: wrap;
 		gap: 12px;
-		margin-top: 24px;
+		margin-top: clamp(16px, 2vh, 24px);
 	}
 	.round-settings label {
 		color: var(--color-muted);
@@ -382,7 +385,10 @@
 		background: var(--color-ink);
 		box-shadow: 12px 12px 0 var(--color-lime);
 		color: #f7f7f2;
-		min-height: 420px;
+		display: flex;
+		flex-direction: column;
+		height: auto;
+		min-height: 0;
 		padding: 28px;
 	}
 	.players-header {
@@ -417,34 +423,6 @@
 		height: 7px;
 		width: 7px;
 	}
-	.player-list {
-		display: grid;
-		gap: 3px;
-		list-style: none;
-		margin: 20px 0 0;
-		padding: 0;
-	}
-	.player-list li {
-		align-items: center;
-		border-bottom: 1px solid #3f444d;
-		display: flex;
-		gap: 11px;
-		min-height: 53px;
-	}
-	.player-status {
-		background: #8bbb4c;
-		border-radius: 50%;
-		height: 8px;
-		width: 8px;
-	}
-	.player-status.offline {
-		background: #858995;
-	}
-	.player-list small {
-		color: #b8bbc5;
-		font-size: 0.72rem;
-		margin-left: auto;
-	}
 	.loading-state {
 		display: grid;
 		min-height: calc(100vh - 100px);
@@ -469,6 +447,8 @@
 			padding-top: 64px;
 		}
 		.players-panel {
+			height: auto;
+			max-height: none;
 			min-height: 0;
 		}
 	}

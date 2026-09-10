@@ -42,6 +42,10 @@ public class GameHub : Hub
         {
             throw new HubException("Game room was not found.");
         }
+        catch (InvalidOperationException exception)
+        {
+            throw new HubException(exception.Message);
+        }
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
