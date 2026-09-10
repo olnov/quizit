@@ -117,6 +117,7 @@
 				themeId: quiz.themeId,
 				questionsPerGame: quiz.questionsPerGame,
 				questionCountMode: quiz.questionCountMode,
+				gameMode: quiz.gameMode,
 				questions: quiz.questions.map(({ clientId: _, ...question }) => question)
 			});
 			quiz = toEditableQuiz(savedQuiz);
@@ -282,6 +283,16 @@
 					onchange={markDirty}
 					><option value={0}>Host chooses number of questions</option><option value={1}
 						>Use all questions</option
+					></select
+				></label
+			>
+			<label
+				><span>Game mode</span><select
+					bind:value={quiz.gameMode}
+					disabled={loading || saving}
+					onchange={markDirty}
+					><option value={0}>Competition — multiplayer, one submitted answer</option><option
+						value={1}>Study — solo, answers can change before submitting</option
 					></select
 				></label
 			>
