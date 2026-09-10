@@ -3,6 +3,7 @@
 	import { Dialog } from 'bits-ui';
 	import { onMount } from 'svelte';
 	import CodeContext from '$lib/components/CodeContext.svelte';
+	import PlayerList from '$lib/components/PlayerList.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import {
 		completeGame,
@@ -236,19 +237,11 @@
 			<aside class="players-panel">
 				<p class="eyebrow">Players</p>
 				<h2>{room.players.length} in the game</h2>
-				<ul class="player-list">
-					{#each room.players as player}<li>
-							<span class:offline={!player.isConnected} class="player-status"></span><span
-								>{player.name}</span
-							><small
-								>{player.isConnected
-									? player.hasAnswered
-										? 'Answered'
-										: 'Thinking'
-									: 'Offline'}</small
-							>
-						</li>{/each}
-				</ul>
+				<PlayerList
+					players={room.players}
+					getStatus={(player) =>
+						player.isConnected ? (player.hasAnswered ? 'Answered' : 'Thinking') : 'Offline'}
+				/>
 			</aside>
 		</section>
 	{:else}<section class="loading"><p>{message}</p></section>{/if}
@@ -256,6 +249,9 @@
 
 <style>
 	.game-shell {
+		box-sizing: border-box;
+		display: flex;
+		flex-direction: column;
 		height: 100dvh;
 		margin: 0 auto;
 		max-width: 1320px;
@@ -278,8 +274,10 @@
 	}
 	.game-grid {
 		display: grid;
+		flex: 1 1 auto;
 		gap: 48px;
 		grid-template-columns: minmax(0, 1fr) 360px;
+		min-height: 0;
 		padding-top: 40px;
 	}
 	.question-meta {
@@ -392,6 +390,9 @@
 		background: var(--color-ink);
 		box-shadow: 10px 10px 0 var(--color-lime);
 		color: #fff;
+		display: flex;
+		flex-direction: column;
+		min-height: 0;
 		padding: 22px;
 	}
 	.players-panel .eyebrow {
@@ -400,31 +401,6 @@
 	h2 {
 		font-size: 1.65rem;
 		margin: 8px 0 16px;
-	}
-	.player-list {
-		list-style: none;
-		margin: 0;
-		padding: 0;
-	}
-	.player-list li {
-		align-items: center;
-		border-top: 1px solid #505560;
-		display: flex;
-		gap: 10px;
-		min-height: 44px;
-	}
-	.player-status {
-		background: #8bbb4c;
-		border-radius: 50%;
-		height: 8px;
-		width: 8px;
-	}
-	.player-status.offline {
-		background: #858995;
-	}
-	.player-list small {
-		color: #c0c3cd;
-		margin-left: auto;
 	}
 	.loading {
 		display: grid;
