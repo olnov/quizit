@@ -291,8 +291,8 @@
 					bind:value={quiz.gameMode}
 					disabled={loading || saving}
 					onchange={markDirty}
-					><option value={0}>Competition — multiplayer, one submitted answer</option><option
-						value={1}>Study — solo, answers can change before submitting</option
+					><option value={0}>Competition</option><option
+						value={1}>Study</option
 					></select
 				></label
 			>
@@ -523,7 +523,7 @@
 		align-items: center;
 		border-top: 1px solid var(--color-border);
 		display: grid;
-		grid-template-columns: minmax(0, 1.6fr) minmax(160px, 0.5fr) minmax(240px, 0.8fr);
+		grid-template-columns: minmax(0, 1.6fr) minmax(160px, 0.5fr) minmax(240px, 0.8fr) minmax(0, 0.8fr);
 		gap: 18px;
 		padding: 16px 0;
 	}
