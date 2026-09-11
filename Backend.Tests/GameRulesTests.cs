@@ -126,6 +126,44 @@ public class GameRulesTests
     }
 
     [Fact]
+    public async Task GetPlayerStatisticsAsync_ReturnsAnsweredAndSkippedQuestions()
+    {
+        await using var dbContext = CreateDbContext();
+        var (quiz, questions) = await SeedQuizAsync(dbContext, questionsPerGame: 2, questionCount: 2);
+        var room = CreateRoom(quiz.Id, questionCount: 2);
+        var player = room.Players.Single();
+        var service = new GameSessionService(dbContext);
+        var session = await service.CreateFromRoomAsync(room, CancellationToken.None);
+        room.CurrentQuestionIndex = 0;
+
+        var answeredQuestion = questions.Single(question => question.Id == room.QuestionIds[0]);
+        await service.SubmitAnswerAsync(
+            room,
+            player.PlayerId,
+            answeredQuestion.CorrectOptionId,
+            CancellationToken.None);
+        var persistedAnswer = await dbContext.GameSessionAnswers.SingleAsync();
+        persistedAnswer.IsCorrect = false;
+        await dbContext.SaveChangesAsync();
+
+        var statistics = await service.GetPlayerStatisticsAsync(
+            session.Id,
+            player.PlayerId,
+            CancellationToken.None);
+
+        Assert.Equal(2, statistics.Rows.Count);
+        var answered = statistics.Rows.Single(row => row.Question == answeredQuestion.Text);
+        Assert.Equal("Correct", answered.PlayerAnswer);
+        Assert.Equal("Correct", answered.CorrectAnswer);
+        Assert.True(answered.IsCorrect);
+        Assert.Null(answered.Explanation);
+        var skipped = statistics.Rows.Single(row => row.Question != answeredQuestion.Text);
+        Assert.Null(skipped.PlayerAnswer);
+        Assert.Equal("Correct", skipped.CorrectAnswer);
+        Assert.False(skipped.IsCorrect);
+    }
+
+    [Fact]
     public void GameRoomService_EnforcesStatusTransitions()
     {
         var service = new GameRoomService();

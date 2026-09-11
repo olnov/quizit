@@ -273,6 +273,7 @@
 								<Dialog.Description id="explanation-description" class="explanation-text"
 									>{reveal.explanation}</Dialog.Description
 								>
+								<Dialog.Close class="game-button explanation-confirm">OK</Dialog.Close>
 							</Dialog.Content>
 						</Dialog.Portal>
 					</Dialog.Root>
@@ -429,6 +430,10 @@
 		flex-direction: column;
 		height: min(560px, calc(100vh - 32px));
 		overflow: hidden;
+	}
+	:global(.explanation-confirm) {
+		align-self: flex-end;
+		margin-top: 20px;
 	}
 	:global(.end-button) {
 		background: #f5d7d1;

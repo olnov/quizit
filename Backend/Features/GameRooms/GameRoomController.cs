@@ -360,6 +360,27 @@ public class GameRoomController : ControllerBase
         return Ok(response);
     }
 
+    [HttpGet("{gameCode}/statistics")]
+    public async Task<IActionResult> GetPlayerStatistics(
+        string gameCode,
+        string playerToken,
+        CancellationToken cancellationToken)
+    {
+        var room = _gameRoomService.GetRoom(gameCode)
+            ?? throw new KeyNotFoundException($"Game room with code '{gameCode}' was not found.");
+        if (room.Status != GameStatus.Completed)
+        {
+            throw new InvalidOperationException("Player statistics are available after the game is completed.");
+        }
+
+        var player = _gameRoomService.GetPlayer(gameCode, playerToken);
+        var statistics = await _gameSessionService.GetPlayerStatisticsAsync(
+            room.GameSessionId ?? throw new InvalidOperationException("The game session was not found."),
+            player.PlayerId,
+            cancellationToken);
+        return Ok(statistics);
+    }
+
     private async Task<GameRoom> StartRoomAsync(
         GameRoom room,
         string playerToken,

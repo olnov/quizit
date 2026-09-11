@@ -18,6 +18,7 @@
 	let isHost = $state(false);
 	let isSolo = $state(false);
 	let token = $state('');
+	let playerId = $state('');
 	let message = $state('Loading results...');
 
 	onMount(async () => {
@@ -29,6 +30,7 @@
 		isHost = session.isHost;
 		isSolo = Boolean(session.isSolo);
 		token = session.playerToken;
+		playerId = session.playerId;
 		void connectToRoom(
 			params.gameCode,
 			session,
@@ -79,9 +81,12 @@
 			<h1>Final results</h1>
 			<ol>
 				{#each [...players].sort((a, b) => b.score - a.score) as player, index}<li>
-						<span class="rank">{index + 1}</span><strong>{player.name}</strong><span
-							>{player.score} pts</span
-						>
+						<span class="rank">{index + 1}</span><strong>{player.name}</strong><span class="score"
+							>{player.score} pts
+							{#if player.playerId === playerId}
+								<a class="statistics-link" href={`/results/${params.gameCode}/stats`}>Full stat</a>
+							{/if}
+						</span>
 					</li>{/each}
 			</ol>
 			{#if isHost}<Button onclick={playAgain}>Play another round</Button>{/if}<a
@@ -132,9 +137,18 @@
 	li strong {
 		font-size: 1.15rem;
 	}
-	li > span:last-child {
+	.score {
 		color: var(--color-muted);
+		display: flex;
+		gap: 14px;
 		margin-left: auto;
+	}
+	.statistics-link {
+		color: var(--color-ink);
+		font-size: 0.78rem;
+		font-weight: 800;
+		text-decoration: underline;
+		text-transform: uppercase;
 	}
 	.home-link {
 		display: block;

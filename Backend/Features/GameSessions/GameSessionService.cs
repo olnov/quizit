@@ -1,6 +1,7 @@
 using Backend.Data;
 using Backend.Features.GameRooms;
 using Backend.Features.GameRooms.Dtos;
+using Backend.Features.GameSessions.Dtos;
 using Backend.Features.Quizes;
 using Microsoft.EntityFrameworkCore;
 
@@ -156,6 +157,57 @@ public class GameSessionService
             .Include(session => session.Questions)
             .Include(session => session.Answers)
             .SingleOrDefaultAsync(session => session.Id == id, cancellationToken);
+    }
+
+    public async Task<PlayerStatisticsDto> GetPlayerStatisticsAsync(
+        Guid gameSessionId,
+        string playerId,
+        CancellationToken cancellationToken)
+    {
+        var player = await _dbContext.GameSessionPlayers
+            .AsNoTracking()
+            .SingleOrDefaultAsync(current => current.GameSessionId == gameSessionId
+                && current.PlayerId == playerId, cancellationToken)
+            ?? throw new InvalidOperationException("The player is not part of this game session.");
+
+        var sessionQuestions = await _dbContext.GameSessionQuestions
+            .AsNoTracking()
+            .Where(current => current.GameSessionId == gameSessionId)
+            .OrderBy(current => current.Order)
+            .ToListAsync(cancellationToken);
+        var questionIds = sessionQuestions.Select(current => current.QuestionId).ToList();
+        var questions = await _dbContext.Questions
+            .AsNoTracking()
+            .Include(question => question.Options)
+            .Where(question => questionIds.Contains(question.Id))
+            .ToDictionaryAsync(question => question.Id, cancellationToken);
+        var answers = await _dbContext.GameSessionAnswers
+            .AsNoTracking()
+            .Where(answer => answer.GameSessionId == gameSessionId
+                && answer.PlayerId == playerId)
+            .ToDictionaryAsync(answer => answer.QuestionId, cancellationToken);
+
+        return new PlayerStatisticsDto
+        {
+            PlayerId = playerId,
+            Score = player.Score,
+            Rows = sessionQuestions.Select(sessionQuestion =>
+            {
+                var question = questions[sessionQuestion.QuestionId];
+                var options = question.Options.ToDictionary(option => option.Id, option => option.Text);
+                answers.TryGetValue(question.Id, out var answer);
+                return new PlayerStatisticsRowDto
+                {
+                    Question = question.Text,
+                    PlayerAnswer = answer is not null
+                        ? options[answer.AnswerOptionId]
+                        : null,
+                    CorrectAnswer = options[question.CorrectOptionId],
+                    IsCorrect = answer?.AnswerOptionId == question.CorrectOptionId,
+                    Explanation = question.Explanation,
+                };
+            }).ToList(),
+        };
     }
 
     public async Task<CurrentQuestionDto> GetCurrentQuestionAsync(
