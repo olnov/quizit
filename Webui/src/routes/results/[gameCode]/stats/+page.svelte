@@ -6,6 +6,7 @@
 	let { params } = $props();
 	let statistics = $state<PlayerStatistics | null>(null);
 	let message = $state('Loading your statistics...');
+	let correctAnswers = $derived(statistics?.rows.filter((row) => row.isCorrect).length ?? 0);
 
 	onMount(async () => {
 		const session = getRoomSession(params.gameCode);
@@ -33,18 +34,20 @@
 		<p class="eyebrow">Round complete</p>
 		<h1>My statistics</h1>
 		{#if statistics}
-			<p class="score">{statistics.score} pts</p>
+			<p class="score">{statistics.score} pts <span>[{correctAnswers}/{statistics.rows.length}]</span></p>
 			<div class="table-wrapper">
 				<table>
 					<thead>
-						<tr><th>Question</th><th>My answer</th><th>Correct answer</th><th>Explanation</th></tr>
+						<tr><th>#</th><th>Question</th><th>My answer</th><th>Correct answer</th><th>Answered correctly</th><th>Explanation</th></tr>
 					</thead>
 					<tbody>
-						{#each statistics.rows as row}
+						{#each statistics.rows as row, index}
 							<tr>
+								<td>{index + 1}</td>
 								<td>{row.question}</td>
 								<td>{row.playerAnswer ?? 'No answer'}</td>
 								<td>{row.correctAnswer}</td>
+								<td class:correct={row.isCorrect} class:incorrect={!row.isCorrect}>{row.isCorrect ? 'Yes' : 'No'}</td>
 								<td>{row.explanation ?? '—'}</td>
 							</tr>
 						{/each}
@@ -79,7 +82,10 @@
 	th, td { border: 1px solid var(--color-border); padding: 15px; text-align: left; vertical-align: top; }
 	th { background: var(--color-ink); color: #fff; font-size: .75rem; letter-spacing: .07em; text-transform: uppercase; }
 	td { line-height: 1.5; }
-	td:first-child { font-weight: 700; min-width: 220px; }
+	th:first-child, td:first-child { min-width: 48px; padding-inline: 10px; white-space: nowrap; width: 48px; }
+	td.correct { background: #ccdc76; }
+	td.incorrect { background: #f5c9c2; }
+	td:nth-child(2) { font-weight: 700; min-width: 220px; }
 	.back-link { display: inline-block; font-weight: 800; margin-top: 30px; }
 	@media (max-width: 600px) { .statistics-shell { padding: 26px 20px 40px; } section { padding-top: 54px; } }
 </style>

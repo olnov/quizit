@@ -142,6 +142,9 @@ public class GameRulesTests
             player.PlayerId,
             answeredQuestion.CorrectOptionId,
             CancellationToken.None);
+        var persistedAnswer = await dbContext.GameSessionAnswers.SingleAsync();
+        persistedAnswer.IsCorrect = false;
+        await dbContext.SaveChangesAsync();
 
         var statistics = await service.GetPlayerStatisticsAsync(
             session.Id,
@@ -152,10 +155,12 @@ public class GameRulesTests
         var answered = statistics.Rows.Single(row => row.Question == answeredQuestion.Text);
         Assert.Equal("Correct", answered.PlayerAnswer);
         Assert.Equal("Correct", answered.CorrectAnswer);
+        Assert.True(answered.IsCorrect);
         Assert.Null(answered.Explanation);
         var skipped = statistics.Rows.Single(row => row.Question != answeredQuestion.Text);
         Assert.Null(skipped.PlayerAnswer);
         Assert.Equal("Correct", skipped.CorrectAnswer);
+        Assert.False(skipped.IsCorrect);
     }
 
     [Fact]

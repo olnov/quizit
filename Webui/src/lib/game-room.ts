@@ -64,6 +64,7 @@ export type PlayerStatistics = {
 		question: string;
 		playerAnswer: string | null;
 		correctAnswer: string;
+		isCorrect: boolean;
 		explanation: string | null;
 	}>;
 };

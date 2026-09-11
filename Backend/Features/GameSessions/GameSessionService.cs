@@ -195,13 +195,15 @@ public class GameSessionService
             {
                 var question = questions[sessionQuestion.QuestionId];
                 var options = question.Options.ToDictionary(option => option.Id, option => option.Text);
+                answers.TryGetValue(question.Id, out var answer);
                 return new PlayerStatisticsRowDto
                 {
                     Question = question.Text,
-                    PlayerAnswer = answers.TryGetValue(question.Id, out var answer)
+                    PlayerAnswer = answer is not null
                         ? options[answer.AnswerOptionId]
                         : null,
                     CorrectAnswer = options[question.CorrectOptionId],
+                    IsCorrect = answer?.AnswerOptionId == question.CorrectOptionId,
                     Explanation = question.Explanation,
                 };
             }).ToList(),

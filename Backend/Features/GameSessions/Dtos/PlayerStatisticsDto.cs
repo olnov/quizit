@@ -12,5 +12,6 @@ public class PlayerStatisticsRowDto
     public string Question { get; set; } = string.Empty;
     public string? PlayerAnswer { get; set; }
     public string CorrectAnswer { get; set; } = string.Empty;
+    public bool IsCorrect { get; set; }
     public string? Explanation { get; set; }
 }
