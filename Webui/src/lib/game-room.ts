@@ -57,6 +57,16 @@ export type CurrentQuestion = {
 export type Reveal = { questionId: string; correctOptionId: string; explanation: string | null };
 export type ScoreboardPlayer = { playerId: string; name: string; score: number };
 export type GameCompleted = { gameCode: string; players: ScoreboardPlayer[] };
+export type PlayerStatistics = {
+	playerId: string;
+	score: number;
+	rows: Array<{
+		question: string;
+		playerAnswer: string | null;
+		correctAnswer: string;
+		explanation: string | null;
+	}>;
+};
 export type PlayerCredentials = { playerId: string; playerToken: string };
 export type RoomSession = PlayerCredentials & {
 	playerName: string;
@@ -197,6 +207,16 @@ export async function getCurrentQuestion(gameCode: string): Promise<CurrentQuest
 export async function getGameState(gameCode: string, playerToken: string): Promise<GameState> {
 	return request<GameState>(
 		`/api/v1/game-rooms/${encodeURIComponent(gameCode)}/state?playerToken=${encodeURIComponent(playerToken)}`,
+		{ method: 'GET' }
+	);
+}
+
+export async function getPlayerStatistics(
+	gameCode: string,
+	playerToken: string
+): Promise<PlayerStatistics> {
+	return request<PlayerStatistics>(
+		`/api/v1/game-rooms/${encodeURIComponent(gameCode)}/statistics?playerToken=${encodeURIComponent(playerToken)}`,
 		{ method: 'GET' }
 	);
 }
