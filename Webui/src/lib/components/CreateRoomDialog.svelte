@@ -11,6 +11,7 @@
 		saveRoomSession,
 		type PublicQuiz
 	} from '$lib/game-room';
+	import { GameMode, isModeAvailableForRoom } from '$lib/game-mode';
 	import { generateNickName } from '$lib/name-generator';
 
 	let { solo = false }: { solo?: boolean } = $props();
@@ -25,15 +26,22 @@
 	let message = $state('');
 	let creating = $state(false);
 	let selectedQuiz = $derived(quizzes.find((quiz) => quiz.id === quizId));
+	let availableQuizzes = $derived(
+		quizzes.filter((quiz) => isModeAvailableForRoom(quiz.gameMode, solo))
+	);
 	let usesAllQuestions = $derived(selectedQuiz?.questionCountMode === 1);
+	let isStudy = $derived(selectedQuiz?.gameMode === GameMode.Study);
 
 	onMount(async () => {
 		try {
 			quizzes = await getQuizzes();
-			quizId = quizzes[0]?.id ?? '';
-			questionCount = quizzes[0]?.questionsPerGame ?? 1;
-			if (quizzes.length === 0) {
-				message = 'There are no quizzes yet. Create a quiz before opening a room.';
+			const firstQuiz = availableQuizzes[0];
+			quizId = firstQuiz?.id ?? '';
+			questionCount = firstQuiz?.questionsPerGame ?? 1;
+			if (availableQuizzes.length === 0) {
+				message = solo
+					? 'There are no Study quizzes available for solo play.'
+					: 'There are no Competition quizzes available for multiplayer rooms.';
 			}
 		} catch (error) {
 			message =
@@ -65,20 +73,20 @@
 			return;
 		}
 
-		if (!quizId) {
-			message = 'There are no quizzes yet. Create a quiz before opening a room.';
+		if (!selectedQuiz) {
+			message = 'Choose a quiz compatible with this game mode.';
 			return;
 		}
 
 		creating = true;
 		message = '';
 		try {
-			const createGame = solo ? createSoloRoom : createRoom;
+			const createGame = isStudy ? createSoloRoom : createRoom;
 			const response = await createGame(
 				quizId,
 				hostName.trim(),
 				questionCount,
-				answerTimeLimitSeconds,
+				isStudy ? null : answerTimeLimitSeconds,
 				questionSelectionMode,
 				!usesAllQuestions && questionSelectionMode === 1 ? specificDifficulty : null
 			);
@@ -86,9 +94,9 @@
 				...response.credentials,
 				playerName: hostName.trim(),
 				isHost: true,
-				isSolo: solo
+				isSolo: isStudy
 			});
-			await goto(solo ? `/game/${response.room.gameCode}` : `/lobby/${response.room.gameCode}`);
+			await goto(isStudy ? `/game/${response.room.gameCode}` : `/lobby/${response.room.gameCode}`);
 		} catch (error) {
 			message = error instanceof Error ? error.message : 'Unable to create the room.';
 		} finally {
@@ -105,14 +113,14 @@
 			<div class="dialog-header">
 				<div>
 					<p class="eyebrow">New game</p>
-					<Dialog.Title>{solo ? 'Play solo' : 'Create a room'}</Dialog.Title>
+					<Dialog.Title>{solo ? 'Play Study mode' : 'Create a Competition room'}</Dialog.Title>
 				</div>
 				<Dialog.Close class="game-dialog-close" aria-label="Close dialog">&times;</Dialog.Close>
 			</div>
 			<Dialog.Description id="create-room-description">
 				{solo
-					? 'Choose a quiz and start playing immediately.'
-					: 'Choose a quiz. Your lobby stays open for ten minutes, then closes automatically.'}
+					? 'Choose a Study quiz and start playing immediately.'
+					: 'Choose a Competition quiz. Your lobby stays open for ten minutes, then closes automatically.'}
 			</Dialog.Description>
 			<form
 				onsubmit={(event) => {
@@ -123,11 +131,11 @@
 				<TextField label="Your nickname" placeholder="e.g. BlueFish99" bind:value={hostName} />
 				<label class="select-field">
 					<span>Quiz</span>
-					<select value={quizId} onchange={changeQuiz} disabled={quizzes.length === 0}>
-						{#if quizzes.length === 0}
-							<option>No quizzes available</option>
+					<select value={quizId} onchange={changeQuiz} disabled={availableQuizzes.length === 0}>
+						{#if availableQuizzes.length === 0}
+							<option>No compatible quizzes available</option>
 						{:else}
-							{#each quizzes as quiz}
+							{#each availableQuizzes as quiz}
 								<option value={quiz.id}>{quiz.title}</option>
 							{/each}
 						{/if}
@@ -149,21 +157,21 @@
 						/>
 					</label>
 				{/if}
-				<label class="select-field">
-					<span>Answer time</span>
-					<select
-						value={answerTimeLimitSeconds ?? 'unlimited'}
-						onchange={(event) => {
-							const value = event.currentTarget.value;
-							answerTimeLimitSeconds = value === 'unlimited' ? null : Number(value);
-						}}
-					>
-						<option value="15">15 seconds</option>
-						<option value="30">30 seconds</option>
-						<option value="60">60 seconds</option>
-						<option value="unlimited">Unlimited</option>
-					</select>
-				</label>
+				{#if !isStudy}<label class="select-field">
+						<span>Answer time</span>
+						<select
+							value={answerTimeLimitSeconds ?? 'unlimited'}
+							onchange={(event) => {
+								const value = event.currentTarget.value;
+								answerTimeLimitSeconds = value === 'unlimited' ? null : Number(value);
+							}}
+						>
+							<option value="15">15 seconds</option>
+							<option value="30">30 seconds</option>
+							<option value="60">60 seconds</option>
+							<option value="unlimited">Unlimited</option>
+						</select>
+					</label>{/if}
 				<label class="select-field">
 					<span>Question order</span>
 					<select value={questionSelectionMode} onchange={changeQuestionSelectionMode}>
@@ -184,7 +192,7 @@
 					>
 				{/if}
 				<Button type="submit" class="submit-button" disabled={creating}>
-					{creating ? 'Creating...' : solo ? 'Start solo game' : 'Create room'}
+					{creating ? 'Creating...' : solo ? 'Start Study game' : 'Create Competition room'}
 				</Button>
 				{#if message}<p class="message" aria-live="polite">{message}</p>{/if}
 			</form>

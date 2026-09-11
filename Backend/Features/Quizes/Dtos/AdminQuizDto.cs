@@ -11,6 +11,7 @@ public class AdminQuizDto
     public int QuestionsPerGame { get; init; }
     public QuestionCountMode QuestionCountMode { get; init; }
     public QuizStatus Status { get; init; }
+    public required GameMode GameMode { get; init; }
     public DateTime CreatedAt { get; init; }
     public DateTime UpdatedAt { get; init; }
     public required List<AdminQuestionDto> Questions { get; init; }

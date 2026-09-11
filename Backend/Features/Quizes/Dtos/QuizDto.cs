@@ -10,4 +10,5 @@ public class QuizDto
     public int QuestionsPerGame { get; set; }
     public QuestionCountMode QuestionCountMode { get; set; }
     public int QuestionCount { get; set; }
+    public GameMode GameMode { get; set; }
 }

@@ -11,6 +11,7 @@ public class GameRoomDto
     public DateTime LobbyExpiresAt { get; set; }
     public int QuestionCount { get; set; }
     public QuestionCountMode QuestionCountMode { get; set; }
+    public GameMode GameMode { get; set; }
     public int? AnswerTimeLimitSeconds { get; set; }
     public QuestionSelectionMode QuestionSelectionMode { get; set; }
     public int? SpecificDifficulty { get; set; }

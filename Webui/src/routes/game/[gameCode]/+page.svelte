@@ -4,6 +4,7 @@
 	import { onMount } from 'svelte';
 	import CodeContext from '$lib/components/CodeContext.svelte';
 	import PlayerList from '$lib/components/PlayerList.svelte';
+	import { GameMode } from '$lib/game-mode';
 	import Button from '$lib/components/ui/Button.svelte';
 	import {
 		completeGame,
@@ -26,9 +27,11 @@
 	let question = $state<CurrentQuestion | null>(null);
 	let reveal = $state<Reveal | null>(null);
 	let selectedOptionId = $state<string | null>(null);
+	let draftOptionId = $state<string | null>(null);
 	let message = $state('Connecting to the game...');
 	let now = $state(Date.now());
 	let endGameDialogOpen = $state(false);
+	let explanationDialogOpen = $state(false);
 
 	let remainingSeconds = $derived(
 		question?.answerDeadlineAt
@@ -36,6 +39,7 @@
 			: null
 	);
 	let isHost = $derived(Boolean(session?.isHost));
+	let isStudy = $derived(room?.gameMode === GameMode.Study);
 
 	onMount(() => {
 		const savedSession = getRoomSession(params.gameCode);
@@ -67,9 +71,12 @@
 					question = updatedQuestion;
 					reveal = null;
 					selectedOptionId = null;
+					draftOptionId = null;
+					explanationDialogOpen = false;
 				},
 				onQuestionRevealed: (updatedReveal) => {
 					reveal = updatedReveal;
+					openStudyExplanationIfNeeded(updatedReveal);
 				},
 				onRoomUpdated: (updatedRoom) => {
 					room = updatedRoom;
@@ -88,6 +95,8 @@
 					question = gameState.question;
 					reveal = gameState.reveal;
 					selectedOptionId = gameState.selectedOptionId;
+					draftOptionId = gameState.selectedOptionId;
+					if (gameState.reveal) openStudyExplanationIfNeeded(gameState.reveal);
 				} catch {
 					/* The game can be between questions. */
 				}
@@ -103,12 +112,38 @@
 
 	async function answer(optionId: string) {
 		if (!session || selectedOptionId || reveal) return;
+		if (isStudy) {
+			draftOptionId = optionId;
+			return;
+		}
 		selectedOptionId = optionId;
 		try {
 			await submitAnswer(params.gameCode, session.playerToken, optionId);
 		} catch (error) {
 			selectedOptionId = null;
 			message = error instanceof Error ? error.message : 'Unable to submit the answer.';
+		}
+	}
+
+	async function submitStudyAnswer() {
+		if (!session || !isStudy || !draftOptionId || selectedOptionId || reveal) return;
+		selectedOptionId = draftOptionId;
+		try {
+			await submitAnswer(params.gameCode, session.playerToken, draftOptionId);
+		} catch (error) {
+			selectedOptionId = null;
+			message = error instanceof Error ? error.message : 'Unable to submit the answer.';
+		}
+	}
+
+	function openStudyExplanationIfNeeded(updatedReveal: Reveal) {
+		if (
+			room?.gameMode === GameMode.Study &&
+			selectedOptionId &&
+			selectedOptionId !== updatedReveal.correctOptionId &&
+			updatedReveal.explanation
+		) {
+			explanationDialogOpen = true;
 		}
 	}
 
@@ -145,9 +180,13 @@
 					<span>{formatTime(remainingSeconds)}</span><span
 						>{reveal
 							? 'Answer revealed'
-							: selectedOptionId
-								? 'Answer submitted'
-								: 'Choose one answer'}</span
+							: isStudy
+								? draftOptionId
+									? 'Submit your answer'
+									: 'Choose one answer'
+								: selectedOptionId
+									? 'Answer submitted'
+									: 'Choose one answer'}</span
 					>
 				</div>
 				{#if question.question.codeContext}
@@ -157,7 +196,7 @@
 				<div class="options">
 					{#each question.question.options as option, index}
 						<button
-							class:chosen={selectedOptionId === option.id}
+							class:chosen={(draftOptionId ?? selectedOptionId) === option.id}
 							class:correct={reveal?.correctOptionId === option.id}
 							class:incorrect={Boolean(
 								reveal && selectedOptionId === option.id && reveal.correctOptionId !== option.id
@@ -168,6 +207,11 @@
 						>
 					{/each}
 				</div>
+				{#if isStudy && !selectedOptionId && !reveal}
+					<Button class="submit-answer" disabled={!draftOptionId} onclick={submitStudyAnswer}
+						>Submit answer</Button
+					>
+				{/if}
 				{#if isHost}
 					<div class="host-controls">
 						{#if room.status === 3}<Button onclick={() => advance('next')}>Next question</Button
@@ -209,7 +253,7 @@
 					</Dialog.Root>
 				{/if}
 				{#if reveal?.explanation}
-					<Dialog.Root>
+					<Dialog.Root bind:open={explanationDialogOpen}>
 						<Dialog.Trigger class="game-button explanation-button">Show explanation</Dialog.Trigger>
 						<Dialog.Portal>
 							<Dialog.Overlay class="game-dialog-overlay" />
@@ -350,6 +394,9 @@
 	:global(.explanation-button) {
 		margin-top: 16px;
 		min-height: 40px;
+	}
+	:global(.submit-answer) {
+		margin-top: 16px;
 	}
 	.explanation-header {
 		align-items: flex-start;

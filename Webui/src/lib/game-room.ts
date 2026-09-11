@@ -1,4 +1,5 @@
 import { HubConnectionBuilder, LogLevel, type HubConnection } from '@microsoft/signalr';
+import type { GameMode } from './game-mode';
 
 const apiBaseUrl = '';
 let backendPublicUrl: Promise<string> | undefined;
@@ -8,7 +9,7 @@ export type GameState = {
 	question: CurrentQuestion | null;
 	reveal: Reveal | null;
 	selectedOptionId: string | null;
-}
+};
 
 export type RoomPlayer = {
 	playerId: string;
@@ -25,6 +26,7 @@ export type GameRoom = {
 	lobbyExpiresAt: string;
 	questionCount: number;
 	questionCountMode: 0 | 1;
+	gameMode: GameMode;
 	answerTimeLimitSeconds: number | null;
 	questionSelectionMode: number;
 	specificDifficulty: number | null;
@@ -37,6 +39,7 @@ export type PublicQuiz = {
 	title: string;
 	questionsPerGame: number;
 	questionCountMode: 0 | 1;
+	gameMode: GameMode;
 	questionCount: number;
 };
 export type AnswerOption = { id: string; text: string };

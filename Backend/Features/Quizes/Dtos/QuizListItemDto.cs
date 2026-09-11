@@ -10,6 +10,7 @@ public class QuizListItemDto
     public string ThemeName { get; init; } = string.Empty;
     public int QuestionsPerGame { get; init; }
     public QuestionCountMode QuestionCountMode { get; init; }
+    public GameMode GameMode { get; init; }
     public int QuestionCount { get; init; }
     public QuizStatus Status { get; init; }
     public DateTime CreatedAt { get; init; }

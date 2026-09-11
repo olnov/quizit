@@ -15,4 +15,5 @@ public class CreateQuizRequest
     public int QuestionsPerGame { get; set; } = 15;
 
     public QuestionCountMode QuestionCountMode { get; set; } = QuestionCountMode.HostSelectable;
+    public GameMode GameMode { get; set; } = GameMode.Competition;
 }
