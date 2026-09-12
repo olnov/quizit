@@ -3,6 +3,7 @@
 	import { Dialog } from 'bits-ui';
 	import { onMount } from 'svelte';
 	import CodeContext from '$lib/components/CodeContext.svelte';
+	import BottomDrawer from '$lib/components/BottomDrawer.svelte';
 	import PlayerList from '$lib/components/PlayerList.svelte';
 	import { GameMode } from '$lib/game-mode';
 	import Button from '$lib/components/ui/Button.svelte';
@@ -31,7 +32,7 @@
 	let message = $state('Connecting to the game...');
 	let now = $state(Date.now());
 	let endGameDialogOpen = $state(false);
-	let explanationDialogOpen = $state(false);
+	let explanationDrawerOpen = $state(false);
 
 	let remainingSeconds = $derived(
 		question?.answerDeadlineAt
@@ -72,7 +73,7 @@
 					reveal = null;
 					selectedOptionId = null;
 					draftOptionId = null;
-					explanationDialogOpen = false;
+					explanationDrawerOpen = false;
 				},
 				onQuestionRevealed: (updatedReveal) => {
 					reveal = updatedReveal;
@@ -143,7 +144,7 @@
 			selectedOptionId !== updatedReveal.correctOptionId &&
 			updatedReveal.explanation
 		) {
-			explanationDialogOpen = true;
+			explanationDrawerOpen = true;
 		}
 	}
 
@@ -253,30 +254,32 @@
 					</Dialog.Root>
 				{/if}
 				{#if reveal?.explanation}
+					<Button class="explanation-button" onclick={() => (explanationDrawerOpen = true)}
+						>Show explanation</Button
+					>
+					<BottomDrawer bind:open={explanationDrawerOpen} title="Why this answer?">
+						<p class="drawer-explanation">{reveal.explanation}</p>
+					</BottomDrawer>
+
+					<!-- Centered explantion dialog
 					<Dialog.Root bind:open={explanationDialogOpen}>
 						<Dialog.Trigger class="game-button explanation-button">Show explanation</Dialog.Trigger>
 						<Dialog.Portal>
 							<Dialog.Overlay class="game-dialog-overlay" />
-							<Dialog.Content
-								class="game-dialog explanation-dialog"
-								aria-describedby="explanation-description"
-							>
+							<Dialog.Content class="game-dialog explanation-dialog" aria-describedby="explanation-description">
 								<div class="explanation-header">
 									<div>
 										<p class="eyebrow">Learning note</p>
 										<Dialog.Title>Why this answer?</Dialog.Title>
 									</div>
-									<Dialog.Close class="game-dialog-close" aria-label="Close explanation"
-										>&times;</Dialog.Close
-									>
+									<Dialog.Close class="game-dialog-close" aria-label="Close explanation">&times;</Dialog.Close>
 								</div>
-								<Dialog.Description id="explanation-description" class="explanation-text"
-									>{reveal.explanation}</Dialog.Description
-								>
+								<Dialog.Description id="explanation-description" class="explanation-text">{reveal.explanation}</Dialog.Description>
 								<Dialog.Close class="game-button explanation-confirm">OK</Dialog.Close>
 							</Dialog.Content>
 						</Dialog.Portal>
 					</Dialog.Root>
+					-->
 				{/if}
 			</div>
 			<aside class="players-panel">
@@ -435,6 +438,7 @@
 		align-self: flex-end;
 		margin-top: 20px;
 	}
+	.drawer-explanation { margin: 0; white-space: pre-wrap; }
 	:global(.end-button) {
 		background: #f5d7d1;
 	}
