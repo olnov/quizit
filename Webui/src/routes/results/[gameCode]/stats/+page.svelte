@@ -78,14 +78,18 @@
 	}
 	.score { color: var(--color-muted); font-size: 1.1rem; font-weight: 800; margin: 0 0 30px; }
 	.table-wrapper { overflow-x: auto; }
-	table { border-collapse: collapse; min-width: 860px; width: 100%; }
+	table { border-collapse: collapse; table-layout: fixed; width: 100%; }
 	th, td { border: 1px solid var(--color-border); padding: 15px; text-align: left; vertical-align: top; }
 	th { background: var(--color-ink); color: #fff; font-size: .75rem; letter-spacing: .07em; text-transform: uppercase; }
-	td { line-height: 1.5; }
-	th:first-child, td:first-child { min-width: 48px; padding-inline: 10px; white-space: nowrap; width: 48px; }
+	td { line-height: 1.5; overflow-wrap: anywhere; }
+	th:first-child, td:first-child { padding-inline: 10px; white-space: nowrap; width: 3%; }
+	th:nth-child(2) { width: 27%; }
+	th:nth-child(3), th:nth-child(4) { width: 10%; }
+	th:nth-child(5) { width: 11%; }
+	th:nth-child(6) { width: 29%; }
 	td.correct { background: #ccdc76; }
 	td.incorrect { background: #f5c9c2; }
-	td:nth-child(2) { font-weight: 700; min-width: 220px; }
+	td:nth-child(2) { font-weight: 700; }
 	.back-link { display: inline-block; font-weight: 800; margin-top: 30px; }
 	@media (max-width: 600px) { .statistics-shell { padding: 26px 20px 40px; } section { padding-top: 54px; } }
 </style>
