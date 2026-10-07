@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import Button from '$lib/components/ui/Button.svelte';
+	import DownloadStatisticsButton from '$lib/components/DownloadStatisticsButton.svelte';
 	import {
 		connectToRoom,
 		getGameResult,
@@ -85,6 +86,11 @@
 							>{player.score} pts
 							{#if player.playerId === playerId}
 								<a class="statistics-link" href={`/results/${params.gameCode}/stats`}>Full stat</a>
+								<DownloadStatisticsButton
+									gameCode={params.gameCode}
+									playerName={player.name}
+									playerToken={token}
+								/>
 							{/if}
 						</span>
 					</li>{/each}
@@ -138,8 +144,10 @@
 		font-size: 1.15rem;
 	}
 	.score {
+		align-items: center;
 		color: var(--color-muted);
 		display: flex;
+		flex-wrap: wrap;
 		gap: 14px;
 		margin-left: auto;
 	}
