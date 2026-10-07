@@ -1,11 +1,14 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
+	import DownloadStatisticsButton from '$lib/components/DownloadStatisticsButton.svelte';
 	import { getPlayerStatistics, getRoomSession, type PlayerStatistics } from '$lib/game-room';
 
 	let { params } = $props();
 	let statistics = $state<PlayerStatistics | null>(null);
 	let message = $state('Loading your statistics...');
+	let playerName = $state('');
+	let playerToken = $state('');
 	let correctAnswers = $derived(statistics?.rows.filter((row) => row.isCorrect).length ?? 0);
 
 	onMount(async () => {
@@ -14,6 +17,8 @@
 			await goto('/');
 			return;
 		}
+		playerName = session.playerName;
+		playerToken = session.playerToken;
 
 		try {
 			statistics = await getPlayerStatistics(params.gameCode, session.playerToken);
@@ -34,11 +39,25 @@
 		<p class="eyebrow">Round complete</p>
 		<h1>My statistics</h1>
 		{#if statistics}
-			<p class="score">{statistics.score} pts <span>[{correctAnswers}/{statistics.rows.length}]</span></p>
+			<p class="score">
+				{statistics.score} pts <span>[{correctAnswers}/{statistics.rows.length}]</span>
+			</p>
+			<div class="report-action">
+				<DownloadStatisticsButton
+					gameCode={params.gameCode}
+					{playerName}
+					{playerToken}
+					{statistics}
+				/>
+			</div>
 			<div class="table-wrapper">
 				<table>
 					<thead>
-						<tr><th>#</th><th>Question</th><th>My answer</th><th>Correct answer</th><th>Answered correctly</th><th>Explanation</th></tr>
+						<tr
+							><th>#</th><th>Question</th><th>My answer</th><th>Correct answer</th><th
+								>Answered correctly</th
+							><th>Explanation</th></tr
+						>
 					</thead>
 					<tbody>
 						{#each statistics.rows as row, index}
@@ -47,7 +66,9 @@
 								<td>{row.question}</td>
 								<td>{row.playerAnswer ?? 'No answer'}</td>
 								<td>{row.correctAnswer}</td>
-								<td class:correct={row.isCorrect} class:incorrect={!row.isCorrect}>{row.isCorrect ? 'Yes' : 'No'}</td>
+								<td class:correct={row.isCorrect} class:incorrect={!row.isCorrect}
+									>{row.isCorrect ? 'Yes' : 'No'}</td
+								>
 								<td>{row.explanation ?? '—'}</td>
 							</tr>
 						{/each}
@@ -68,28 +89,90 @@
 		min-height: 100vh;
 		padding: 34px 48px 64px;
 	}
-	section { padding-top: 72px; }
+	section {
+		padding-top: 72px;
+	}
 	h1 {
 		font-family: var(--font-display);
 		font-size: clamp(3rem, 7vw, 6rem);
 		font-weight: 400;
-		line-height: .9;
+		line-height: 0.9;
 		margin: 16px 0;
 	}
-	.score { color: var(--color-muted); font-size: 1.1rem; font-weight: 800; margin: 0 0 30px; }
-	.table-wrapper { overflow-x: auto; }
-	table { border-collapse: collapse; table-layout: fixed; width: 100%; }
-	th, td { border: 1px solid var(--color-border); padding: 15px; text-align: left; vertical-align: top; }
-	th { background: var(--color-ink); color: #fff; font-size: .75rem; letter-spacing: .07em; text-transform: uppercase; }
-	td { line-height: 1.5; overflow-wrap: anywhere; }
-	th:first-child, td:first-child { padding-inline: 10px; white-space: nowrap; width: 3%; }
-	th:nth-child(2) { width: 27%; }
-	th:nth-child(3), th:nth-child(4) { width: 10%; }
-	th:nth-child(5) { width: 11%; }
-	th:nth-child(6) { width: 29%; }
-	td.correct { background: #ccdc76; }
-	td.incorrect { background: #f5c9c2; }
-	td:nth-child(2) { font-weight: 700; }
-	.back-link { display: inline-block; font-weight: 800; margin-top: 30px; }
-	@media (max-width: 600px) { .statistics-shell { padding: 26px 20px 40px; } section { padding-top: 54px; } }
+	.score {
+		color: var(--color-muted);
+		font-size: 1.1rem;
+		font-weight: 800;
+		margin: 0 0 30px;
+	}
+	.report-action {
+		margin: -14px 0 26px;
+	}
+	.table-wrapper {
+		overflow-x: auto;
+	}
+	table {
+		border-collapse: collapse;
+		table-layout: fixed;
+		width: 100%;
+	}
+	th,
+	td {
+		border: 1px solid var(--color-border);
+		padding: 15px;
+		text-align: left;
+		vertical-align: top;
+	}
+	th {
+		background: var(--color-ink);
+		color: #fff;
+		font-size: 0.75rem;
+		letter-spacing: 0.07em;
+		text-transform: uppercase;
+	}
+	td {
+		line-height: 1.5;
+		overflow-wrap: anywhere;
+	}
+	th:first-child,
+	td:first-child {
+		padding-inline: 10px;
+		white-space: nowrap;
+		width: 3%;
+	}
+	th:nth-child(2) {
+		width: 27%;
+	}
+	th:nth-child(3),
+	th:nth-child(4) {
+		width: 10%;
+	}
+	th:nth-child(5) {
+		width: 11%;
+	}
+	th:nth-child(6) {
+		width: 29%;
+	}
+	td.correct {
+		background: #ccdc76;
+	}
+	td.incorrect {
+		background: #f5c9c2;
+	}
+	td:nth-child(2) {
+		font-weight: 700;
+	}
+	.back-link {
+		display: inline-block;
+		font-weight: 800;
+		margin-top: 30px;
+	}
+	@media (max-width: 600px) {
+		.statistics-shell {
+			padding: 26px 20px 40px;
+		}
+		section {
+			padding-top: 54px;
+		}
+	}
 </style>
