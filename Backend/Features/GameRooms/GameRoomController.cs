@@ -140,6 +140,7 @@ public class GameRoomController : ControllerBase
         CancellationToken cancellationToken)
     {
         var room = _gameRoomService.BeginQuestion(gameCode, request.PlayerToken);
+        await _gameSessionService.MarkQuestionStartedAsync(room, cancellationToken);
         var question = await _gameSessionService.GetCurrentQuestionAsync(room, cancellationToken);
         await _gameHubContext.Clients.Group(gameCode)
             .SendAsync("QuestionStarted", question, cancellationToken);
@@ -283,6 +284,7 @@ public class GameRoomController : ControllerBase
             return Ok(completed);
         }
 
+        await _gameSessionService.MarkQuestionStartedAsync(room, cancellationToken);
         var question = await _gameSessionService.GetCurrentQuestionAsync(room, cancellationToken);
         await _gameHubContext.Clients.Group(gameCode)
             .SendAsync("QuestionStarted", question, cancellationToken);
@@ -391,6 +393,7 @@ public class GameRoomController : ControllerBase
         await _gameSessionService.CreateFromRoomAsync(room, cancellationToken);
         _gameRoomService.StartGame(room.GameCode, playerToken, allowSolo);
         var startedRoom = _gameRoomService.BeginQuestion(room.GameCode, playerToken);
+        await _gameSessionService.MarkQuestionStartedAsync(startedRoom, cancellationToken);
 
         var response = GameRoomMapper.ToDto(startedRoom);
         await _gameHubContext.Clients.Group(room.GameCode)

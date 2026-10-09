@@ -127,6 +127,7 @@ builder.Services.AddSingleton<GameRoomService>();
 builder.Services.AddHostedService<GameRoomCleanupService>();
 builder.Services.AddHostedService<GameQuestionTimeoutService>();
 builder.Services.AddScoped<GameSessionService>();
+builder.Services.AddScoped<QuizStatisticsService>();
 builder.Services.AddScoped<UserManagementService>();
 builder.Services.Configure<InitialAdminOptions>(
     builder.Configuration.GetSection(InitialAdminOptions.SectionName));
