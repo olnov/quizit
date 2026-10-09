@@ -57,6 +57,60 @@ export type PagedResult<T> = {
 	totalPages: number;
 };
 
+export type QuizAttempt = {
+	sessionId: string;
+	playerName: string;
+	completedAt: string;
+	score: number;
+	questionCount: number;
+	answeredCount: number;
+	correctCount: number;
+};
+
+export type QuizStatisticsReport = {
+	quizId: string;
+	quizTitle: string;
+	totalCount: number;
+	averageScore: number;
+	page: number;
+	pageSize: number;
+	totalPages: number;
+	items: QuizAttempt[];
+};
+
+export type QuizAttemptDetail = {
+	sessionId: string;
+	playerName: string;
+	completedAt: string;
+	score: number;
+	rows: Array<{
+		question: string;
+		playerAnswer: string | null;
+		correctAnswer: string;
+		isCorrect: boolean;
+		explanation: string | null;
+	}>;
+};
+
+export type QuizDetailedReport = {
+	quizId: string;
+	quizTitle: string;
+	completedGames: number;
+	averageCompletionSeconds: number | null;
+	slowestQuestions: Array<{
+		questionId: string;
+		question: string;
+		timedAnswerCount: number;
+		averageAnswerSeconds: number;
+	}>;
+	mostMissedQuestions: Array<{
+		questionId: string;
+		question: string;
+		answeredCount: number;
+		incorrectCount: number;
+	}>;
+};
+
 export type QuizListFilters = {
 	search?: string;
 	status?: QuizStatus;
@@ -116,6 +170,36 @@ export async function getAdminQuizzes(
 
 export async function getAdminQuiz(quizId: string): Promise<AdminQuiz> {
 	return adminRequest(`/api/v1/admin/quizes/${encodeURIComponent(quizId)}`);
+}
+
+export async function getQuizStatistics(
+	quizId: string,
+	from: string,
+	to: string,
+	page = 1
+): Promise<QuizStatisticsReport> {
+	const query = new URLSearchParams({ from, to, page: String(page), pageSize: '20' });
+	return adminRequest(`/api/v1/admin/quizes/${encodeURIComponent(quizId)}/statistics?${query}`);
+}
+
+export async function getQuizAttemptDetail(
+	quizId: string,
+	sessionId: string
+): Promise<QuizAttemptDetail> {
+	return adminRequest(
+		`/api/v1/admin/quizes/${encodeURIComponent(quizId)}/statistics/${encodeURIComponent(sessionId)}`
+	);
+}
+
+export async function getQuizDetailedReport(
+	quizId: string,
+	from: string,
+	to: string
+): Promise<QuizDetailedReport> {
+	const query = new URLSearchParams({ from, to });
+	return adminRequest(
+		`/api/v1/admin/quizes/${encodeURIComponent(quizId)}/statistics/detailed?${query}`
+	);
 }
 
 export async function getQuizThemes(): Promise<QuizTheme[]> {
