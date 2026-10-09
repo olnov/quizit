@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { onMount } from 'svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import {
@@ -76,7 +77,7 @@
 
 	function changeStatus(event: Event) {
 		const value = (event.currentTarget as HTMLSelectElement).value;
-		status = value === 'all' ? 'all' : Number(value) as QuizStatus;
+		status = value === 'all' ? 'all' : (Number(value) as QuizStatus);
 		resetFilters();
 	}
 
@@ -144,8 +145,8 @@
 
 <main class="admin-shell">
 	<header class="topbar">
-		<a class="brand" href="/"><span class="brand-mark">Q</span><span>QuizIt</span></a>
-		<a class="admin-link" href="/">Leave admin</a>
+		<a class="brand" href={resolve('/')}><span class="brand-mark">Q</span><span>QuizIt</span></a>
+		<a class="admin-link" href={resolve('/')}>Leave admin</a>
 	</header>
 
 	<section class="page-header">
@@ -154,7 +155,7 @@
 			<h1>Quizzes</h1>
 			<p>Build and maintain question sets for collaborative learning games.</p>
 		</div>
-		<a class="game-button" href="/admin/quizes/new">New quiz</a>
+		<a class="game-button" href={resolve('/admin/quizes/new')}>New quiz</a>
 	</section>
 
 	<section class="controls" aria-label="Quiz filters">
@@ -174,8 +175,8 @@
 		>
 		<label
 			><span>Theme</span><select value={themeId} onchange={changeTheme}
-				><option value="all">All themes</option>{#each themes as item}<option value={item.id}
-						>{item.name}</option
+				><option value="all">All themes</option>{#each themes as item (item.id)}<option
+						value={item.id}>{item.name}</option
 					>{/each}</select
 			></label
 		>
@@ -205,7 +206,9 @@
 				{:else}
 					<h2>Import needs changes</h2>
 					<ul>
-						{#each importValidation?.errors ?? [importError] as item}<li>{item}</li>{/each}
+						{#each importValidation?.errors ?? [importError] as item, index (index)}<li>
+								{item}
+							</li>{/each}
 					</ul>
 				{/if}
 			</div>
@@ -227,7 +230,11 @@
 			<p class="list-message">Loading quizzes…</p>
 		{:else if quizzes.length === 0}
 			<div class="empty-state">
-				<h2>{search || status !== 'all' || themeId !== 'all' ? 'No matching quizzes' : 'No quizzes to show'}</h2>
+				<h2>
+					{search || status !== 'all' || themeId !== 'all'
+						? 'No matching quizzes'
+						: 'No quizzes to show'}
+				</h2>
 				<p>
 					{search || status !== 'all' || themeId !== 'all'
 						? 'Try changing the search or filters.'
@@ -238,9 +245,9 @@
 			{#each quizzes as quiz (quiz.id)}
 				<article class="quiz-row">
 					<div>
-						<a class="quiz-title" href={`/admin/quizes/${quiz.id}`}>{quiz.title}</a><small
-							>Updated {new Date(quiz.updatedAt).toLocaleDateString()}</small
-						>
+						<a class="quiz-title" href={resolve('/admin/quizes/[quizId]', { quizId: quiz.id })}
+							>{quiz.title}</a
+						><small>Updated {new Date(quiz.updatedAt).toLocaleDateString()}</small>
 					</div>
 					<span class="theme">{quiz.themeName}</span>
 					<span
@@ -254,10 +261,9 @@
 							: `${quiz.questionCount} / ${quiz.questionsPerGame}`}</span
 					>
 					<div class="row-actions">
-						<a href={`/admin/quizes/${quiz.id}`}>Edit</a><button
-							type="button"
-							onclick={() => handleExport(quiz)}>Export</button
-						>
+						<a href={resolve('/admin/quizes/[quizId]', { quizId: quiz.id })}>Edit</a><a
+							href={resolve('/admin/quizes/[quizId]/statistics', { quizId: quiz.id })}>Statistics</a
+						><button type="button" onclick={() => handleExport(quiz)}>Export</button>
 					</div>
 				</article>
 			{/each}
@@ -409,7 +415,7 @@
 		align-items: center;
 		display: grid;
 		gap: 20px;
-		grid-template-columns: minmax(0, 2fr) minmax(120px, 1fr) 90px 105px 115px;
+		grid-template-columns: minmax(0, 2fr) minmax(120px, 1fr) 90px 105px 170px;
 	}
 	.list-head {
 		color: var(--color-muted);
@@ -460,6 +466,7 @@
 	.row-actions {
 		display: flex;
 		gap: 12px;
+		flex-wrap: wrap;
 	}
 	.row-actions a,
 	.row-actions button {
