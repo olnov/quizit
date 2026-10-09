@@ -6,4 +6,5 @@ public class GameSessionQuestion
     public Guid GameSessionId { get; set; }
     public Guid QuestionId { get; set; }
     public int Order { get; set; }
+    public DateTime? StartedAt { get; set; }
 }

@@ -228,6 +228,22 @@ public class GameSessionService
         };
     }
 
+    public async Task MarkQuestionStartedAsync(GameRoom room, CancellationToken cancellationToken)
+    {
+        if (room.GameSessionId is null)
+            throw new InvalidOperationException("The game session has not started.");
+
+        var questionId = GetCurrentQuestionId(room);
+        var sessionQuestion = await _dbContext.GameSessionQuestions.SingleAsync(question =>
+            question.GameSessionId == room.GameSessionId && question.QuestionId == questionId,
+            cancellationToken);
+        if (sessionQuestion.StartedAt is null)
+        {
+            sessionQuestion.StartedAt = DateTime.UtcNow;
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+    }
+
     public async Task<SubmittedAnswer> SubmitAnswerAsync(
         GameRoom room,
         string playerId,

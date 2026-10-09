@@ -126,6 +126,7 @@ CREATE TABLE "GameSessionQuestions" (
     "GameSessionId" uuid NOT NULL,
     "QuestionId" uuid NOT NULL,
     "Order" integer NOT NULL,
+    "StartedAt" timestamp with time zone NULL,
     CONSTRAINT "PK_GameSessionQuestions" PRIMARY KEY ("Id"),
     CONSTRAINT "FK_GameSessionQuestions_GameSessions_GameSessionId"
         FOREIGN KEY ("GameSessionId") REFERENCES "GameSessions" ("Id")
